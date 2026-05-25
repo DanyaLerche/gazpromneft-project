@@ -1,0 +1,48 @@
+.documentation-page {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 32px;
+  color: #172b4d;
+}
+
+.documentation-page__header h1 {
+  margin: 8px 0 12px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.documentation-page__eyebrow {
+  margin: 0;
+  color: #0052cc;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.documentation-page__description {
+  max-width: 640px;
+  margin: 0;
+  color: #5e6c84;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.documentation-page__empty {
+  max-width: 680px;
+  padding: 32px;
+  border: 1px dashed #c1c7d0;
+  border-radius: 12px;
+  background: #f7f8f9;
+}
+
+.documentation-page__empty h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.documentation-page__empty p {
+  margin: 0;
+  color: #5e6c84;
+}
