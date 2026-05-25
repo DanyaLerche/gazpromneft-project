@@ -1,0 +1,67 @@
+<aside [style.width.px]="sidebarWidth"
+       class="sidebar"
+       [class.sidebar--collapsed]="!expanded"
+       [class.sidebar--mobile-open]="mobileOpen">
+    <div class="sidebar-content">
+        <a class="sidebar-logo"
+           routerLink="/projects"
+           (click)="mobileOpen && toggleRequested.emit()"
+           aria-label="Вернуться к проектам">
+            <div class="sidebar-logo__mark"
+                 aria-hidden="true">
+                <span></span>
+            </div>
+
+            <div class="sidebar-logo__copy">
+                <div class="sidebar-logo__title">Платформа проектов</div>
+                <div class="sidebar-logo__subtitle">Рабочее пространство</div>
+            </div>
+        </a>
+
+        <nav class="sidebar-links"
+             aria-label="Основная навигация">
+            <section class="sidebar-section"
+                     *ngFor="let section of sections">
+                <div class="sidebar-section__title">{{ section.title }}</div>
+
+                <ng-container *ngFor="let link of sectionLinks(section.key); trackBy: trackByName">
+                    <a *ngIf="!link.disabled && (link.url || link.absoluteUrl)"
+                       class="link"
+                       [routerLink]="getLink(link)"
+                       [queryParams]="link.queryParams || null"
+                       [class.active]="isLinkActive(link)"
+                       (click)="mobileOpen && toggleRequested.emit()"
+                       [attr.aria-label]="link.name">
+                        <svg-icon class="link__icon"
+                                  [name]="link.icon"
+                                  [size]="20">
+                        </svg-icon>
+                        <span class="link__label">{{ link.name }}</span>
+                    </a>
+
+                    <button *ngIf="link.disabled || (!link.url && !link.absoluteUrl)"
+                            class="link link--disabled"
+                            type="button"
+                            [disabled]="true"
+                            [attr.aria-label]="link.name + ' недоступно'">
+                        <svg-icon class="link__icon"
+                                  [name]="link.icon"
+                                  [size]="20">
+                        </svg-icon>
+                        <span class="link__label">{{ link.name }}</span>
+                    </button>
+                </ng-container>
+            </section>
+        </nav>
+
+        <button class="sidebar-collapse"
+                type="button"
+                (click)="toggleRequested.emit()"
+                [attr.aria-label]="expanded ? 'Свернуть меню' : 'Развернуть меню'">
+            <svg-icon [name]="expanded ? 'chevron-left' : 'chevron-right'"
+                      [size]="18">
+            </svg-icon>
+            <span class="sidebar-collapse__label">{{ expanded ? 'Свернуть' : 'Развернуть' }}</span>
+        </button>
+    </div>
+</aside>

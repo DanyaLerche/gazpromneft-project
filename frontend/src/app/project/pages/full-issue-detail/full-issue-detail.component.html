@@ -1,0 +1,31 @@
+<div class="pr-6 py-8 pl-8 h-full w-full flex flex-col">
+    <div *ngIf="hasIssueError"
+         class="max-w-xl rounded-xl border border-red-200 bg-red-50 px-6 py-8 text-center">
+        <div class="text-lg font-semibold text-textDarkest">
+            {{ issueErrorTitle }}
+        </div>
+        <div class="mt-2 text-sm text-textMedium">
+            {{ issueErrorMessage }}
+        </div>
+        <div class="mt-5">
+            <j-button className="btn-primary"
+                      (click)="backHome()">
+                Вернуться на доску
+            </j-button>
+        </div>
+    </div>
+
+    <issue-detail *ngIf="!hasIssueError && (issueById$ | async) as issue; else issueStateTmpl"
+                  [issue]="issue"
+                  [isShowCloseButton]="false"
+                  [isShowFullScreenButton]="false"
+                  (onDelete)="deleteIssue($event)">
+    </issue-detail>
+</div>
+
+<ng-template #issueStateTmpl>
+    <div *ngIf="isLoading"
+         class="rounded border border-dashed border-borderLight px-4 py-6 text-sm text-textMedium">
+        Загрузка карточки задачи...
+    </div>
+</ng-template>

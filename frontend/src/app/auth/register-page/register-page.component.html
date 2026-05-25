@@ -1,0 +1,83 @@
+<section class="auth-card">
+    <div class="auth-card__eyebrow">Registration</div>
+    <h1 class="auth-card__title">Создание аккаунта</h1>
+
+    <div *ngIf="serverError"
+         class="auth-card__message auth-card__message--error">
+        {{ serverError }}
+    </div>
+
+    <form class="auth-form"
+          [formGroup]="form"
+          (ngSubmit)="submit()">
+        <label class="auth-form__field">
+            <span class="auth-form__label">Email</span>
+            <input class="form-input auth-form__input"
+                   type="email"
+                   formControlName="email"
+                   autocomplete="email"
+                   placeholder="name@company.ru" />
+            <span *ngIf="form.get('email')?.touched && form.get('email')?.hasError('required')"
+                  class="auth-form__error">
+                Укажите email.
+            </span>
+            <span *ngIf="form.get('email')?.touched && form.get('email')?.hasError('email')"
+                  class="auth-form__error">
+                Введите корректный email.
+            </span>
+            <span *ngIf="form.get('email')?.touched && form.get('email')?.hasError('whitespace')"
+                  class="auth-form__error">
+                Email не может быть пустым или состоять из пробелов.
+            </span>
+        </label>
+
+        <label class="auth-form__field">
+            <span class="auth-form__label">Полное имя</span>
+            <input class="form-input auth-form__input"
+                   type="text"
+                   formControlName="fullName"
+                   autocomplete="name"
+                   placeholder="Иван Петров" />
+            <span *ngIf="form.get('fullName')?.touched && form.get('fullName')?.hasError('required')"
+                  class="auth-form__error">
+                Укажите имя пользователя.
+            </span>
+            <span *ngIf="form.get('fullName')?.touched && form.get('fullName')?.hasError('maxlength')"
+                  class="auth-form__error">
+                Имя слишком длинное.
+            </span>
+            <span *ngIf="form.get('fullName')?.touched && form.get('fullName')?.hasError('whitespace')"
+                  class="auth-form__error">
+                Имя не может быть пустым или состоять из пробелов.
+            </span>
+        </label>
+
+        <label class="auth-form__field">
+            <span class="auth-form__label">Пароль</span>
+            <input class="form-input auth-form__input"
+                   type="password"
+                   formControlName="password"
+                   autocomplete="new-password"
+                   placeholder="Минимум 8 символов" />
+            <span *ngIf="form.get('password')?.touched && form.get('password')?.hasError('required')"
+                  class="auth-form__error">
+                Укажите пароль.
+            </span>
+            <span *ngIf="form.get('password')?.touched && form.get('password')?.hasError('minlength')"
+                  class="auth-form__error">
+                Минимальная длина пароля: 8 символов.
+            </span>
+        </label>
+
+        <button class="auth-form__submit"
+                type="submit"
+                [disabled]="isSubmitting">
+            {{ isSubmitting ? 'Создаём аккаунт...' : 'Зарегистрироваться' }}
+        </button>
+    </form>
+
+    <div class="auth-card__footer">
+        Уже зарегистрированы?
+        <a [routerLink]="['/auth/login']">Перейти ко входу</a>
+    </div>
+</section>

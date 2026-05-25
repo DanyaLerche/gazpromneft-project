@@ -1,0 +1,14 @@
+<div class="px-10 py-8">
+    <div class="pb-4 text-2xl font-medium leading-normal text-textDarkest">
+        Удалить задачу?
+    </div>
+    <p class="pb-4 whitespace-pre-wrap text-15">
+        Задача будет удалена без возможности восстановления. Связанные записи времени и вложения тоже исчезнут.
+    </p>
+    <div class="flex pt-3">
+        <j-button className="btn-primary mr-2" (click)="deleteIssue()">Удалить</j-button>
+        <j-button className="'btn-empty'"
+                  (click)="closeModal()">
+            Отмена</j-button>
+    </div>
+</div>

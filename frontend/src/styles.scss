@@ -1,0 +1,44 @@
+@import '../node_modules/ng-zorro-antd/ng-zorro-antd.min.css';
+@import '@angular/cdk/overlay-prebuilt.css';
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import './app/design-system/styles/_tokens.scss';
+@import './app/design-system/styles/_primitives.scss';
+
+.ant-popover-inner,
+.ant-modal-content,
+.ant-tooltip-inner {
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+  background: var(--color-bg-surface);
+}
+
+.ant-popover-arrow-content {
+  background: var(--color-bg-surface);
+}
+
+.ant-modal-header {
+  border-bottom: 1px solid var(--color-border-soft);
+  background: transparent;
+}
+
+.ant-modal-footer {
+  border-top: 1px solid var(--color-border-soft);
+}
+
+.pre-bootstrapping-container {
+  @apply w-full h-full relative;
+  background:
+    radial-gradient(circle at center, rgba(108, 76, 241, 0.18), transparent 10rem),
+    var(--color-bg-app);
+
+  .pre-bootstrapping-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}

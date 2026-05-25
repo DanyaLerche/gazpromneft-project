@@ -1,0 +1,29 @@
+<div class="input-container"
+     [ngClass]="containerClassName">
+    <div *ngIf="icon"
+         class="input-icon-container"
+         [style.width.px]="iconContainerWidth">
+        <svg-icon [name]="icon"
+                  [size]="iconSize"
+                  class="text-textMedium">
+        </svg-icon>
+    </div>
+
+    <input class="input form-input"
+           type="text"
+           [formControl]="control"
+           [placeholder]="placeholder"
+           [class.invalid]="control?.invalid && (control?.dirty || control?.touched)"
+           [style.padding-left.px]="icon ? iconContainerWidth : null"
+           [style.padding-right.px]="isShowClearButton ? iconContainerWidth : null" />
+
+    <div *ngIf="isShowClearButton"
+         class="input-icon-container right"
+         [style.width.px]="iconContainerWidth"
+         (click)="clear()">
+        <svg-icon name="times"
+                  [size]="iconSize"
+                  class="text-textMedium">
+        </svg-icon>
+    </div>
+</div>

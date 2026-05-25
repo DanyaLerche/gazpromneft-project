@@ -1,0 +1,78 @@
+<div class="project-date-input"
+     [class.project-date-input--open]="isOpen"
+     [class.project-date-input--large]="size === 'large'"
+     [class.project-date-input--disabled]="disabled">
+    <div class="project-date-input__control"
+         (click)="openPanel()">
+        <input class="project-date-input__field"
+               type="text"
+               [value]="displayValue"
+               [placeholder]="placeholder"
+               [disabled]="disabled"
+               [attr.aria-label]="label"
+               (focus)="openPanel()"
+               (input)="onManualInput($event)"
+               (blur)="onBlur()"
+               (keydown.enter)="onEnter($event)"
+               (keydown.escape)="onEscape()" />
+
+        <button *ngIf="displayValue && !disabled"
+                type="button"
+                class="project-date-input__clear"
+                aria-label="Очистить дату"
+                (mousedown)="$event.preventDefault()"
+                (click)="clear($event)">
+            x
+        </button>
+
+        <button type="button"
+                class="project-date-input__toggle"
+                [disabled]="disabled"
+                aria-label="Открыть календарь"
+                (mousedown)="$event.preventDefault()"
+                (click)="togglePanel($event)">
+            <span class="project-date-input__toggle-icon"></span>
+        </button>
+    </div>
+
+    <div *ngIf="isOpen"
+         class="project-date-input__panel">
+        <div class="project-date-input__header">
+            <button type="button"
+                    class="project-date-input__nav"
+                    aria-label="Предыдущий месяц"
+                    (click)="previousMonth()">
+                &lt;
+            </button>
+            <div class="project-date-input__month">
+                {{ monthLabel }}
+            </div>
+            <button type="button"
+                    class="project-date-input__nav"
+                    aria-label="Следующий месяц"
+                    (click)="nextMonth()">
+                &gt;
+            </button>
+        </div>
+
+        <div class="project-date-input__weekdays">
+            <span *ngFor="let weekDay of weekDayLabels">
+                {{ weekDay }}
+            </span>
+        </div>
+
+        <div class="project-date-input__grid">
+            <button *ngFor="let day of calendarDays"
+                    type="button"
+                    class="project-date-input__day"
+                    [class.project-date-input__day--outside]="!day.isCurrentMonth"
+                    [class.project-date-input__day--today]="day.isToday"
+                    [class.project-date-input__day--selected]="day.isSelected"
+                    [class.project-date-input__day--disabled]="day.isDisabled"
+                    [disabled]="day.isDisabled"
+                    (click)="selectDate(day)">
+                {{ day.label }}
+            </button>
+        </div>
+    </div>
+</div>

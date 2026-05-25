@@ -1,0 +1,88 @@
+form {
+  .label {
+    display: block;
+    padding-bottom: 0.5rem;
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-body-sm);
+    font-weight: 600;
+    color: var(--color-text-strong);
+  }
+
+  .form-input {
+    width: 100%;
+    min-height: 2.75rem;
+    border: 1px solid var(--color-border-soft);
+    border-radius: var(--radius-xl);
+    background: rgba(249, 250, 252, 0.95);
+    color: var(--color-text-strong);
+    padding: 0 0.75rem;
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+    transition:
+      border-color var(--transition-base),
+      box-shadow var(--transition-base),
+      background-color var(--transition-base);
+
+    &:hover {
+      background: #fff;
+    }
+
+    &:focus {
+      border-color: rgba(108, 76, 241, 0.42);
+      background: #fff;
+      box-shadow: var(--focus-ring);
+      outline: none;
+    }
+
+    &::placeholder {
+      color: var(--color-text-soft);
+      font-size: var(--font-size-body-sm);
+    }
+  }
+
+  input:not(:disabled),
+  text-area:not(:disabled) {
+    cursor: text;
+  }
+
+  .ng-invalid {
+    &.ng-dirty,
+    &.ng-dirty:focus,
+    &.ng-touched,
+    &.ng-touched:focus {
+      background-color: #fff;
+      border-color: rgba(239, 68, 68, 0.45);
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+    }
+  }
+}
+
+.textarea-inline-control {
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0.625rem 0.75rem;
+  line-height: 1.45;
+  resize: none;
+  overflow: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-xl);
+  background: rgba(249, 250, 252, 0.95);
+  color: var(--color-text-strong);
+  appearance: none;
+  transition:
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    background-color var(--transition-base);
+
+  &:hover:not(:focus) {
+    background: #fff;
+  }
+
+  &:focus {
+    border-color: rgba(108, 76, 241, 0.42);
+    background: #fff;
+    box-shadow: var(--focus-ring);
+    outline: none;
+  }
+}

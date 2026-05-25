@@ -1,0 +1,825 @@
+<svg-definitions></svg-definitions>
+
+<div class="for-me-shell for-me-shell--compact-sidebar">
+    <div class="for-me-main">
+        <header class="for-me-topbar">
+            <div class="for-me-topbar__left">
+                <a class="for-me-topbar__brand"
+                   routerLink="/projects"
+                   aria-label="Вернуться к проектам">
+                    <div class="for-me-topbar__brand-mark"
+                         aria-hidden="true">
+                        <span></span>
+                    </div>
+                    <div class="for-me-topbar__brand-title">Платформа проектов</div>
+                </a>
+                <div class="for-me-topbar__crumbs">Главная / Системная панель</div>
+            </div>
+
+            <label class="for-me-search">
+                <span class="for-me-search__icon"
+                      aria-hidden="true">
+                    <svg-icon name="search"
+                              [size]="18"></svg-icon>
+                </span>
+                <input class="for-me-search__input"
+                       [value]="searchQuery"
+                       placeholder="Поиск по проектам, задачам и людям..."
+                       (input)="onSearchInput($event)" />
+            </label>
+
+            <div class="for-me-topbar__actions">
+                <button *ngIf="canCreateProjects"
+                        class="for-me-create-button"
+                        type="button"
+                        (click)="openCreateForm()">
+                    <svg-icon name="plus"
+                              [size]="16"></svg-icon>
+                    <span>Создать</span>
+                </button>
+
+
+                <ng-container *ngIf="authQuery.user$ | async as user">
+                    <button class="for-me-profile"
+                            type="button"
+                            nz-popover
+                            nzPopoverPlacement="bottomRight"
+                            [nzPopoverContent]="projectsUserProfileTmpl"
+                            nzPopoverTrigger="click"
+                            [attr.title]="user.name"
+                            aria-label="Открыть профиль пользователя">
+                        <j-avatar *ngIf="user.avatarUrl; else projectsUserInitialTmpl"
+                                  [avatarUrl]="user.avatarUrl"
+                                  [size]="38"
+                                  className="for-me-profile__avatar for-me-profile__avatar--image">
+                        </j-avatar>
+
+                        <ng-template #projectsUserInitialTmpl>
+                            <div class="for-me-profile__avatar">
+                                {{ getUserInitial(user) }}
+                            </div>
+                        </ng-template>
+
+                        <div class="for-me-profile__copy">
+                            <div class="for-me-profile__name">{{ user.name }}</div>
+                            <div class="for-me-profile__role">{{ currentProfileRole }}</div>
+                        </div>
+                    </button>
+
+                    <ng-template #projectsUserProfileTmpl>
+                        <j-user-profile-popover [user]="user"
+                                                [role]="currentProfileRole"
+                                                [team]="profileTeam"
+                                                [info]="profileInfo">
+                        </j-user-profile-popover>
+                    </ng-template>
+                </ng-container>
+
+                <button class="for-me-logout"
+                        type="button"
+                        [disabled]="isLoggingOut"
+                        (click)="logout()">
+                    {{ isLoggingOut ? 'Выход...' : 'Выйти' }}
+                </button>
+            </div>
+        </header>
+
+        <main class="for-me-content">
+            <section class="for-me-hero"
+                     id="overview">
+                <div class="for-me-hero__copy">
+                    <div class="for-me-hero__eyebrow">Рабочая панель</div>
+                    <h1 class="for-me-hero__title">Системная панель</h1>
+                    <p class="for-me-hero__description">
+                        Обзор задач, проектов, активности и изменений, важных для вашей работы.
+                    </p>
+                </div>
+
+                <div class="for-me-hero__summary">
+                    <div class="for-me-hero__summary-label">Сегодня</div>
+                    <div class="for-me-hero__summary-value">{{ focusIssuesCount }} задач в фокусе</div>
+                    <div class="for-me-hero__summary-meta">{{ activeProjectsCount }} проектов активны</div>
+                </div>
+            </section>
+
+            <section class="for-me-stats"
+                     aria-label="Ключевые показатели">
+                <article *ngFor="let stat of dashboardStats"
+                         class="dashboard-stat"
+                         [ngClass]="'dashboard-stat--' + stat.tone">
+                    <div class="dashboard-stat__icon">
+                        <svg-icon [name]="stat.icon"
+                                  [size]="20"></svg-icon>
+                    </div>
+                    <div class="dashboard-stat__copy">
+                        <div class="dashboard-stat__label">{{ stat.label }}</div>
+                        <div class="dashboard-stat__value">{{ stat.value }}</div>
+                        <div class="dashboard-stat__description">{{ stat.description }}</div>
+                    </div>
+                    <div class="dashboard-stat__trend"
+                         aria-hidden="true">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </article>
+            </section>
+
+            <section *ngIf="errorMessage"
+                     class="dashboard-state dashboard-state--error">
+                <div class="dashboard-state__icon">
+                    <svg-icon name="help"
+                              [size]="22"></svg-icon>
+                </div>
+
+                <div class="dashboard-state__copy">
+                    <div class="dashboard-state__title">Не удалось открыть системную панель</div>
+                    <p class="dashboard-state__description">{{ errorMessage }}</p>
+                </div>
+
+                <button class="projects-action-button projects-action-button--secondary"
+                        type="button"
+                        (click)="retryLoadDashboard()">
+                    Повторить
+                </button>
+            </section>
+
+            <div *ngIf="!errorMessage"
+                 class="for-me-dashboard-grid">
+                <section class="dashboard-card dashboard-card--assigned"
+                         id="assigned-panel">
+                    <header class="dashboard-card__header dashboard-card__header--between">
+                        <div>
+                            <h2 class="dashboard-card__title">Назначено мне</h2>
+                            <div class="dashboard-card__subtitle">Текущие задачи, сроки и проекты</div>
+                        </div>
+
+                        <div class="dashboard-card__header-actions">
+                            <span class="dashboard-card__counter"
+                                  *ngIf="!isLoading">
+                                {{ filteredAssignedIssues.length }} задач
+                            </span>
+                            <button class="dashboard-card__link-button"
+                                    type="button"
+                                    (click)="clearAssignedFilters()">
+                                Показать все
+                            </button>
+                        </div>
+                    </header>
+
+                    <div class="dashboard-card__body dashboard-card__body--flush">
+                        <div *ngIf="isLoading"
+                             class="dashboard-panel__loading dashboard-panel__loading--padded">
+                            <div *ngFor="let card of loadingCards"
+                                 class="dashboard-skeleton dashboard-skeleton--row"
+                                 [attr.data-card]="card"></div>
+                        </div>
+
+                        <ng-container *ngIf="!isLoading">
+                            <div class="dashboard-filters"
+                                 *ngIf="assignedIssues.length">
+                                <button class="dashboard-filter"
+                                        [class.dashboard-filter--active]="selectedAssignedFilter === 'all'"
+                                        type="button"
+                                        (click)="selectAssignedFilter('all')">
+                                    Все
+                                </button>
+
+                                <button class="dashboard-filter"
+                                        [class.dashboard-filter--active]="selectedAssignedFilter === 'overdue'"
+                                        type="button"
+                                        (click)="selectAssignedFilter('overdue')">
+                                    Просрочено
+                                </button>
+
+                                <button class="dashboard-filter"
+                                        [class.dashboard-filter--active]="selectedAssignedFilter === 'today'"
+                                        type="button"
+                                        (click)="selectAssignedFilter('today')">
+                                    Сегодня
+                                </button>
+
+                                <button class="dashboard-filter"
+                                        [class.dashboard-filter--active]="selectedAssignedFilter === 'week'"
+                                        type="button"
+                                        (click)="selectAssignedFilter('week')">
+                                    На этой неделе
+                                </button>
+
+                                <label class="dashboard-filter dashboard-filter--select"
+                                       [class.dashboard-filter--active]="selectedProjectId !== 'all'">
+                                    <select class="dashboard-filter__select"
+                                            aria-label="Фильтр по проекту"
+                                            [value]="selectedProjectId"
+                                            (change)="onAssignedProjectChange($event)">
+                                        <option value="all">Все проекты</option>
+                                        <option *ngFor="let project of assignedProjects; trackBy: trackByProjectId"
+                                                [value]="project.id">
+                                            {{ project.name }}
+                                        </option>
+                                    </select>
+                                </label>
+                            </div>
+
+                            <div *ngIf="filteredAssignedIssues.length; else emptyAssignedTmpl"
+                                 class="dashboard-task-list">
+                                <div class="dashboard-task-list__head">
+                                    <span>Ключ</span>
+                                    <span>Задача</span>
+                                    <span>Проект</span>
+                                    <span>Статус</span>
+                                    <span>Срок</span>
+                                </div>
+
+                                <a *ngFor="let issue of filteredAssignedIssues; trackBy: trackByIssueId"
+                                   class="dashboard-task-row"
+                                   [routerLink]="['/projects', issue.projectId, 'issue', issue.id]">
+                                    <div class="dashboard-task-row__key-cell">
+                                        <span class="dashboard-task-row__key">{{ issue.key }}</span>
+                                        <span [class]="getTypeClass(issue)">
+                                            {{ getTypeLabel(issue) }}
+                                        </span>
+                                    </div>
+
+                                    <div class="dashboard-task-row__summary">
+                                        <div class="dashboard-task-row__title">{{ issue.title }}</div>
+                                        <div class="dashboard-task-row__description">
+                                            {{ getIssueSummary(issue) }}
+                                        </div>
+                                    </div>
+
+                                    <div class="dashboard-task-row__project">
+                                        {{ getProjectName(issue.projectId) }}
+                                    </div>
+
+                                    <div class="dashboard-task-row__status">
+                                        <span [class]="getStatusClass(issue)">
+                                            {{ getStatusName(issue.statusId) }}
+                                        </span>
+                                    </div>
+
+                                    <div class="dashboard-task-row__due">
+                                        <span [class]="getDueClass(issue)">
+                                            {{ getDueLabel(issue) }}
+                                        </span>
+                                        <span *ngIf="issue.dueDate"
+                                              class="dashboard-task-row__due-date">
+                                            {{ issue.dueDate | date:"d MMM" }}
+                                        </span>
+                                    </div>
+                                </a>
+                            </div>
+                        </ng-container>
+                    </div>
+                </section>
+
+                <section class="dashboard-card dashboard-card--projects"
+                         id="projects-list">
+                    <header class="dashboard-card__header dashboard-card__header--between">
+                        <div>
+                            <h2 class="dashboard-card__title">Мои проекты</h2>
+                            <div class="dashboard-card__subtitle">{{ visibleProjects.length }} рабочих пространств</div>
+                        </div>
+
+                        <button *ngIf="canCreateProjects"
+                                class="projects-action-button"
+                                type="button"
+                                (click)="openCreateForm()">
+                            Создать проект
+                        </button>
+                    </header>
+
+                    <div class="dashboard-card__body dashboard-card__body--scroll">
+                        <div *ngIf="isLoading"
+                             class="dashboard-panel__loading">
+                            <div *ngFor="let card of loadingCards"
+                                 class="dashboard-skeleton dashboard-skeleton--project"
+                                 [attr.data-card]="card"></div>
+                        </div>
+
+                        <div *ngIf="!isLoading && visibleProjects.length; else emptyProjectsTmpl"
+                             class="dashboard-projects">
+                            <a *ngFor="let project of visibleProjects; let projectIndex = index; trackBy: trackByProjectId"
+                               class="dashboard-project"
+                               [ngClass]="'dashboard-project--tone-' + (projectIndex % 4)"
+                               [routerLink]="['/projects', project.id]">
+                                <div class="dashboard-project__topline">
+                                    <div class="dashboard-project__mark">{{ project.key }}</div>
+                                    <div class="dashboard-project__action">Открыть</div>
+                                </div>
+
+                                <div class="dashboard-project__name">{{ project.name }}</div>
+                                <div class="dashboard-project__meta">
+                                    Создан {{ project.createdAt | date:"d MMMM y" }}
+                                </div>
+
+                                <div class="dashboard-project__details">
+                                    <span>{{ getProjectRole(project) }}</span>
+                                    <span>{{ getProjectIssueTotal(project) }} задач</span>
+                                </div>
+
+                                <div class="dashboard-project__progress"
+                                     aria-hidden="true">
+                                    <div class="dashboard-project__progress-bar"
+                                         [style.width.%]="getProjectProgress(project)"></div>
+                                </div>
+
+                                <div class="dashboard-project__progress-label">
+                                    {{ getProjectDoneCount(project) }} / {{ getProjectIssueTotal(project) }} выполнено
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="dashboard-card"
+                         id="activity-feed">
+                    <header class="dashboard-card__header">
+                        <div>
+                            <h2 class="dashboard-card__title">Лента активности</h2>
+                            <div class="dashboard-card__subtitle">Последние события по задачам</div>
+                        </div>
+                    </header>
+
+                    <div class="dashboard-card__body dashboard-card__body--scroll">
+                        <div *ngIf="isLoading"
+                             class="dashboard-panel__loading">
+                            <div *ngFor="let card of loadingCards"
+                                 class="dashboard-skeleton dashboard-skeleton--activity"
+                                 [attr.data-card]="card"></div>
+                        </div>
+
+                        <div *ngIf="!isLoading && activityIssues.length; else emptyActivityTmpl"
+                             class="dashboard-timeline">
+                            <a *ngFor="let issue of activityIssues; trackBy: trackByIssueId"
+                               class="dashboard-timeline__item"
+                               [routerLink]="['/projects', issue.projectId, 'issue', issue.id]">
+                                <div [class]="getActivityClass(issue)">
+                                    {{ issue.key.split('-')[0] }}
+                                </div>
+
+                                <div class="dashboard-timeline__content">
+                                    <div class="dashboard-timeline__title">
+                                        {{ getActivityTitle(issue) }}
+                                    </div>
+                                    <div class="dashboard-timeline__description">
+                                        {{ getActivityDescription(issue) }}
+                                    </div>
+                                    <div class="dashboard-timeline__time">
+                                        {{ getIssueActivityDate(issue) | date:"d MMM, HH:mm" }}
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="dashboard-card"
+                         id="mini-digest">
+                    <header class="dashboard-card__header dashboard-card__header--between">
+                        <div>
+                            <h2 class="dashboard-card__title">Изменения за время отсутствия</h2>
+                            <div class="dashboard-card__subtitle">То, что появилось после последнего визита</div>
+                        </div>
+
+                        <span class="dashboard-card__counter"
+                              *ngIf="!isLoading">
+                            {{ digestItems.length }} обновлений
+                        </span>
+                    </header>
+
+                    <div class="dashboard-card__body dashboard-card__body--scroll">
+                        <div *ngIf="isLoading"
+                             class="dashboard-panel__loading">
+                            <div *ngFor="let card of loadingCards"
+                                 class="dashboard-skeleton dashboard-skeleton--activity"
+                                 [attr.data-card]="card"></div>
+                        </div>
+
+                        <div *ngIf="!isLoading && digestItems.length; else emptyDigestTmpl"
+                             class="dashboard-feed">
+                            <a *ngFor="let item of digestItems; trackBy: trackByDigestItem"
+                               class="dashboard-feed__item"
+                               [routerLink]="['/projects', item.projectId, 'issue', item.issueId]">
+                                <div class="dashboard-feed__title">
+                                    <span [class]="getDigestItemBadgeClass(item)">
+                                        {{ getDigestItemBadgeLabel(item) }}
+                                    </span>
+                                    <span>{{ item.summary }}</span>
+                                </div>
+                                <div class="dashboard-feed__description">
+                                    {{ getProjectName(item.projectId) }} · {{ item.issueKey }} · {{ item.issueTitle }}
+                                </div>
+                                <div class="dashboard-feed__time">
+                                    {{ item.occurredAt | date:"d MMM, HH:mm" }}
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="dashboard-card"
+                         id="auto-history">
+                    <header class="dashboard-card__header dashboard-card__header--between">
+                        <div>
+                            <h2 class="dashboard-card__title">Что делал вчера</h2>
+                            <div class="dashboard-card__subtitle"
+                                 *ngIf="!isLoading">
+                                Последние {{ actionHistoryItems.length }} действий
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="dashboard-card__body dashboard-card__body--scroll">
+                        <div *ngIf="isLoading"
+                             class="dashboard-panel__loading">
+                            <div *ngFor="let card of loadingCards"
+                                 class="dashboard-skeleton dashboard-skeleton--activity"
+                                 [attr.data-card]="card"></div>
+                        </div>
+
+                        <ng-container *ngIf="!isLoading">
+                            <a *ngIf="latestActionHistoryItem as lastItem"
+                               class="dashboard-resume"
+                               [routerLink]="['/projects', lastItem.projectId, 'issue', lastItem.issueId]">
+                                <div class="dashboard-resume__label">Где остановились</div>
+                                <div class="dashboard-resume__title">{{ lastItem.issueKey }} · {{ lastItem.issueTitle }}</div>
+                                <div class="dashboard-resume__meta">{{ lastItem.summary }}</div>
+                            </a>
+
+                            <div *ngIf="actionHistoryItems.length; else emptyActionHistoryTmpl"
+                                 class="dashboard-feed">
+                                <a *ngFor="let item of actionHistoryItems; trackBy: trackByActionHistoryItem"
+                                   class="dashboard-feed__item"
+                                   [routerLink]="['/projects', item.projectId, 'issue', item.issueId]">
+                                    <div class="dashboard-feed__title">
+                                        <span class="dashboard-chip dashboard-chip--neutral">
+                                            {{ getActionHistoryBadgeLabel(item) }}
+                                        </span>
+                                        <span>{{ item.summary }}</span>
+                                    </div>
+                                    <div class="dashboard-feed__description">
+                                        {{ getProjectName(item.projectId) }} · {{ item.issueKey }} · {{ item.issueTitle }}
+                                    </div>
+                                    <div class="dashboard-feed__time">
+                                        {{ item.occurredAt | date:"d MMM, HH:mm" }}
+                                    </div>
+                                </a>
+                            </div>
+                        </ng-container>
+                    </div>
+                </section>
+
+                <section *ngIf="canManagePlatformUsers"
+                         class="dashboard-card dashboard-card--platform"
+                         id="platform-users">
+                    <header class="dashboard-card__header dashboard-card__header--between">
+                        <div>
+                            <h2 class="dashboard-card__title">Пользователи платформы</h2>
+                            <div class="dashboard-card__subtitle">Роли, доступ и статус участников</div>
+                        </div>
+
+                        <span class="dashboard-card__counter"
+                              *ngIf="!isLoadingPlatformUsers">
+                            {{ platformUsers.length }} пользователей
+                        </span>
+                    </header>
+
+                    <div class="dashboard-card__body">
+                        <div class="dashboard-platform-toolbar">
+                            <label class="dashboard-platform-toolbar__search">
+                                <span class="dashboard-platform-toolbar__label">Поиск</span>
+                                <input class="dashboard-platform-toolbar__input"
+                                       [value]="platformUserSearchQuery"
+                                       placeholder="Поиск по имени или email"
+                                       (input)="onPlatformUserSearchInput($event)" />
+                            </label>
+
+                            <label class="dashboard-platform-toolbar__filter">
+                                <span class="dashboard-platform-toolbar__label">Роль</span>
+                                <select class="dashboard-platform-toolbar__select"
+                                        [value]="selectedPlatformRoleFilter"
+                                        (change)="onPlatformRoleFilterChange($event)">
+                                    <option value="all">Все роли</option>
+                                    <option *ngFor="let role of platformRoleOptions"
+                                            [value]="role">
+                                        {{ getUserAppRoleLabel(role) }}
+                                    </option>
+                                </select>
+                            </label>
+
+                            <button class="projects-action-button projects-action-button--secondary"
+                                    type="button"
+                                    [disabled]="isLoadingPlatformUsers"
+                                    (click)="loadPlatformUsers()">
+                                {{ isLoadingPlatformUsers ? 'Загрузка...' : 'Обновить' }}
+                            </button>
+                        </div>
+
+                        <div *ngIf="platformUsersErrorMessage"
+                             class="dashboard-inline-error">
+                            {{ platformUsersErrorMessage }}
+                        </div>
+
+                        <div *ngIf="isLoadingPlatformUsers"
+                             class="dashboard-panel__loading">
+                            <div *ngFor="let card of loadingCards"
+                                 class="dashboard-skeleton dashboard-skeleton--user"
+                                 [attr.data-card]="card"></div>
+                        </div>
+
+                        <div *ngIf="!isLoadingPlatformUsers && platformUsers.length; else emptyPlatformUsersTmpl"
+                             class="dashboard-platform-users">
+                            <div *ngFor="let user of platformUsers; trackBy: trackByUserId"
+                                 class="dashboard-platform-user">
+                                <div class="dashboard-platform-user__identity">
+                                    <j-avatar *ngIf="user.avatarUrl; else platformUserInitialTmpl"
+                                              [avatarUrl]="user.avatarUrl"
+                                              [size]="42"
+                                              className="dashboard-platform-user__avatar dashboard-platform-user__avatar--image">
+                                    </j-avatar>
+
+                                    <ng-template #platformUserInitialTmpl>
+                                        <div class="dashboard-platform-user__avatar">
+                                            {{ getUserInitial(user) }}
+                                        </div>
+                                    </ng-template>
+
+                                    <div class="dashboard-platform-user__copy">
+                                        <div class="dashboard-platform-user__name">
+                                            {{ user.name || 'Пользователь без имени' }}
+                                        </div>
+                                        <div class="dashboard-platform-user__email">{{ user.email }}</div>
+                                    </div>
+                                </div>
+
+                                <div class="dashboard-platform-user__badges">
+                                    <span class="dashboard-chip dashboard-chip--update">
+                                        {{ getUserAppRoleLabel(getPlatformUserRole(user)) }}
+                                    </span>
+                                    <span *ngIf="isCurrentUser(user)"
+                                          class="dashboard-chip dashboard-chip--comment">
+                                        Вы
+                                    </span>
+                                    <span *ngIf="user.isActive === false"
+                                          class="dashboard-chip dashboard-chip--danger">
+                                        Неактивен
+                                    </span>
+                                </div>
+
+                                <div class="dashboard-platform-user__controls">
+                                    <select class="dashboard-platform-user__select"
+                                            [disabled]="isPlatformUserUpdating(user.id)"
+                                            [value]="getPlatformUserRole(user)"
+                                            (change)="onPlatformUserRoleChange(user, $event)">
+                                        <option *ngFor="let role of platformRoleOptions"
+                                                [value]="role">
+                                            {{ getUserAppRoleLabel(role) }}
+                                        </option>
+                                    </select>
+
+                                    <div *ngIf="isPlatformUserUpdating(user.id)"
+                                         class="dashboard-platform-user__updating">
+                                        Обновление...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <aside class="focus-widget"
+           [class.focus-widget--collapsed]="isFocusWidgetCollapsed"
+           aria-label="Виджет режима концентрации">
+        <div class="focus-widget__header">
+            <div>
+                <div class="focus-widget__eyebrow">Фокус</div>
+                <div class="focus-widget__title">Режим концентрации</div>
+            </div>
+            <button class="focus-widget__collapse"
+                    type="button"
+                    (click)="toggleFocusWidgetCollapsed()">
+                {{ isFocusWidgetCollapsed ? 'Развернуть' : 'Свернуть' }}
+            </button>
+        </div>
+
+        <ng-container *ngIf="!isFocusWidgetCollapsed; else collapsedFocusWidgetTmpl">
+            <div class="focus-widget__display">
+                <div class="focus-widget__phase">{{ focusMode.state.phaseLabel }}</div>
+                <div class="focus-widget__timer">{{ focusMode.state.timerLabel }}</div>
+                <div class="focus-widget__progress">
+                    <span [style.width.%]="focusMode.state.progressPercent"></span>
+                </div>
+            </div>
+
+            <div class="focus-widget__meta">
+                Сегодня в фокусе: {{ focusMode.state.focusMinutesToday }} мин
+            </div>
+
+            <a class="focus-widget__link-button"
+               routerLink="/focus">
+                Перейти к экрану концентрации
+            </a>
+
+            <div class="focus-widget__actions">
+                <button class="focus-widget__button focus-widget__button--primary"
+                        type="button"
+                        (click)="focusMode.toggleTimer()">
+                    {{ focusMode.state.isRunning ? 'Пауза' : 'Старт' }}
+                </button>
+
+                <button class="focus-widget__button"
+                        type="button"
+                        (click)="focusMode.resetCurrentPhase()">
+                    Сброс
+                </button>
+            </div>
+        </ng-container>
+    </aside>
+</div>
+
+<ng-template #collapsedFocusWidgetTmpl>
+    <button class="focus-widget__compact"
+            type="button"
+            (click)="toggleFocusWidgetCollapsed()">
+        <span class="focus-widget__compact-title">Фокус</span>
+        <span class="focus-widget__compact-timer">{{ focusMode.state.timerLabel }}</span>
+    </button>
+</ng-template>
+
+<ng-template #emptyAssignedTmpl>
+    <div class="dashboard-empty">
+        <div class="dashboard-empty__icon">
+            <svg-icon name="board"
+                      [size]="22"></svg-icon>
+        </div>
+        <div class="dashboard-empty__title">Назначенных задач нет</div>
+        <p class="dashboard-empty__description">
+            Когда вам назначат задачу, она появится здесь.
+        </p>
+    </div>
+</ng-template>
+
+<ng-template #emptyProjectsTmpl>
+    <div class="dashboard-empty"
+         *ngIf="!isLoading">
+        <div class="dashboard-empty__icon">
+            <svg-icon name="component"
+                      [size]="22"></svg-icon>
+        </div>
+        <div class="dashboard-empty__title">Проекты не найдены</div>
+        <p class="dashboard-empty__description">
+            Создайте первый проект или измените строку поиска.
+        </p>
+    </div>
+</ng-template>
+
+<ng-template #emptyActivityTmpl>
+    <div class="dashboard-empty"
+         *ngIf="!isLoading">
+        <div class="dashboard-empty__icon">
+            <svg-icon name="star"
+                      [size]="22"></svg-icon>
+        </div>
+        <div class="dashboard-empty__title">Пока нет обновлений</div>
+        <p class="dashboard-empty__description">
+            После создания или изменения задач здесь появятся последние события.
+        </p>
+    </div>
+</ng-template>
+
+<ng-template #emptyDigestTmpl>
+    <div class="dashboard-empty"
+         *ngIf="!isLoading">
+        <div class="dashboard-empty__icon">
+            <svg-icon name="report"
+                      [size]="22"></svg-icon>
+        </div>
+        <div class="dashboard-empty__title">Изменений не найдено</div>
+        <p class="dashboard-empty__description">
+            Новые обновления задач и комментарии появятся здесь после следующего визита.
+        </p>
+    </div>
+</ng-template>
+
+<ng-template #emptyActionHistoryTmpl>
+    <div class="dashboard-empty"
+         *ngIf="!isLoading">
+        <div class="dashboard-empty__icon">
+            <svg-icon name="page"
+                      [size]="22"></svg-icon>
+        </div>
+        <div class="dashboard-empty__title">Действия пока не зафиксированы</div>
+        <p class="dashboard-empty__description">
+            Когда вы создадите задачу, добавите комментарий или worklog, это отобразится в истории.
+        </p>
+    </div>
+</ng-template>
+
+<ng-template #emptyPlatformUsersTmpl>
+    <div class="dashboard-empty"
+         *ngIf="!isLoadingPlatformUsers">
+        <div class="dashboard-empty__icon">
+            <svg-icon name="feedback"
+                      [size]="22"></svg-icon>
+        </div>
+        <div class="dashboard-empty__title">Пользователи платформы не найдены</div>
+        <p class="dashboard-empty__description">
+            Измените поисковый запрос или фильтр по роли, чтобы найти нужного пользователя.
+        </p>
+    </div>
+</ng-template>
+
+<div *ngIf="showCreateForm && canCreateProjects"
+     class="create-project-modal"
+     (click)="closeCreateForm()">
+    <div class="create-project-modal__panel"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="create-project-title"
+         (click)="$event.stopPropagation()">
+        <div class="create-project-modal__header">
+            <div>
+                <div class="create-project-modal__eyebrow">Новый проект</div>
+                <h2 id="create-project-title"
+                    class="create-project-modal__title">
+                    Создать проект
+                </h2>
+            </div>
+
+            <button class="create-project-modal__close"
+                    type="button"
+                    aria-label="Закрыть"
+                    (click)="closeCreateForm()">
+                &times;
+            </button>
+        </div>
+
+        <form class="create-project-form"
+              [formGroup]="createForm"
+              (ngSubmit)="submitCreate()">
+            <label class="create-project-form__field">
+                <span class="create-project-form__label">Название проекта</span>
+                <input class="form-input"
+                       formControlName="name"
+                       maxlength="200"
+                       placeholder="Например, Корпоративная платформа" />
+                <span *ngIf="createForm.get('name')?.touched && createForm.get('name')?.hasError('required')"
+                      class="create-project-form__error">
+                    Укажите название проекта.
+                </span>
+                <span *ngIf="createForm.get('name')?.touched && createForm.get('name')?.hasError('whitespace')"
+                      class="create-project-form__error">
+                    Название не может состоять только из пробелов.
+                </span>
+            </label>
+
+            <label class="create-project-form__field">
+                <span class="create-project-form__label">Ключ проекта</span>
+                <input class="form-input create-project-form__key-input"
+                       formControlName="key"
+                       maxlength="20"
+                       placeholder="PLATFORM"
+                       (input)="onKeyInput()" />
+                <span *ngIf="createForm.get('key')?.touched && createForm.get('key')?.hasError('required')"
+                      class="create-project-form__error">
+                    Укажите ключ проекта.
+                </span>
+                <span *ngIf="createForm.get('key')?.touched && createForm.get('key')?.hasError('minlength')"
+                      class="create-project-form__error">
+                    Минимум 2 символа.
+                </span>
+                <span *ngIf="createForm.get('key')?.touched && createForm.get('key')?.hasError('pattern')"
+                      class="create-project-form__error">
+                    Используйте только буквы, цифры, "_" или "-".
+                </span>
+                <span *ngIf="createForm.get('key')?.touched && createForm.get('key')?.hasError('whitespace')"
+                      class="create-project-form__error">
+                    Ключ не может быть пустым или состоять из пробелов.
+                </span>
+            </label>
+
+            <div *ngIf="createErrorMessage"
+                 class="create-project-form__server-error">
+                {{ createErrorMessage }}
+            </div>
+
+            <div class="create-project-form__footer">
+                <button class="projects-action-button projects-action-button--secondary"
+                        type="button"
+                        (click)="closeCreateForm()">
+                    Отмена
+                </button>
+
+                <button class="projects-action-button"
+                        type="submit"
+                        [disabled]="isCreating">
+                    {{ isCreating ? 'Создание...' : 'Создать проект' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

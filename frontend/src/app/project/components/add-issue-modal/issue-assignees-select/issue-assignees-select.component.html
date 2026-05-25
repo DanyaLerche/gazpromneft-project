@@ -1,0 +1,18 @@
+<project-inline-select class="w-full"
+                       [formControl]="control"
+                       [items]="users"
+                       valueKey="id"
+                       labelKey="name"
+                       [allowClear]="true"
+                       emptyText="No user found."
+                       [selectedTemplate]="assigneesSelectedTmpl"
+                       [optionTemplate]="optionTemplate">
+</project-inline-select>
+<ng-template #optionTemplate
+             let-user>
+    <j-user [user]="user"></j-user>
+</ng-template>
+<ng-template #assigneesSelectedTmpl
+             let-selected>
+    <j-user [user]="selected"></j-user>
+</ng-template>

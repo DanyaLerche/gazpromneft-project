@@ -1,0 +1,39 @@
+<div class="status-list">
+    <header class="status-list__header">
+        <div class="status-list__title-row">
+            <h3 class="status-list__title">{{ status.name }}</h3>
+            <span class="status-list__count">{{ issuesCount }}</span>
+        </div>
+        <button class="status-list__add"
+                type="button"
+                aria-label="Добавить задачу"
+                disabled>
+            <svg-icon name="plus"
+                      [size]="14">
+            </svg-icon>
+        </button>
+    </header>
+
+    <div class="status-list__content"
+         cdkDropList
+         [cdkDropListSortingDisabled]="true"
+         [cdkDropListData]="issues"
+         [id]="status.id"
+         (cdkDropListDropped)="drop($event)">
+        <task-card *ngFor="let issue of issues; trackBy: trackByIssueId"
+                   [issue]="issue"
+                   [statusName]="status.name"
+                   cdkDrag
+                   [cdkDragData]="issue">
+        </task-card>
+
+        <div *ngIf="!issues.length"
+             class="status-list__empty">
+            <svg-icon name="no-result"
+                      [size]="30">
+            </svg-icon>
+            <p>Пока нет задач</p>
+            <span>Перетащите задачу сюда или создайте новую.</span>
+        </div>
+    </div>
+</div>

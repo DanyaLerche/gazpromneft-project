@@ -1,0 +1,39 @@
+<div class="mt-6 mb-1 uppercase text-textMedium text-13 font-bold">
+    Исполнитель
+</div>
+
+<j-button *ngIf="assignee"
+          [className]="'btn-secondary mr-1-5 mb-2'">
+    <div class="flex items-center">
+        <j-user [user]="assignee"></j-user>
+        <svg-icon (click)="removeUser(assignee.id)"
+                  title="Remove user"
+                  [size]="20"
+                  [name]="'times'"
+                  class="text-textLight">
+        </svg-icon>
+    </div>
+</j-button>
+
+<div *ngIf="!assignee"
+     class="mb-2 rounded border border-dashed border-borderLight px-3 py-2 text-sm text-textMedium">
+    Исполнитель не назначен
+</div>
+
+<project-inline-select appearance="link"
+                       class="add-more-select"
+                       triggerClassName="add-more"
+                       [items]="users"
+                       [ngModel]="issue?.assigneeId"
+                       valueKey="id"
+                       labelKey="name"
+                       placeholder="+ Add Assignee"
+                       [showSelectedValue]="false"
+                       [optionTemplate]="assigneeOptionTmpl"
+                       (ngModelChange)="selectAssignee($event)">
+</project-inline-select>
+
+<ng-template #assigneeOptionTmpl
+             let-option>
+    <j-user [user]="option"></j-user>
+</ng-template>

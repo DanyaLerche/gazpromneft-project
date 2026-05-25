@@ -1,0 +1,86 @@
+<section class="board-filter">
+    <div class="board-filter__top">
+        <label class="board-filter__search">
+            <svg-icon class="board-filter__search-icon"
+                      name="search"
+                      [size]="15">
+            </svg-icon>
+            <input class="board-filter__search-input"
+                   type="search"
+                   aria-label="Поиск по задачам"
+                   placeholder="Поиск по названию, ключу и описанию..."
+                   [formControl]="searchControl" />
+        </label>
+
+        <button class="board-filter__reset"
+                type="button"
+                (click)="resetFilters()">
+            Сбросить фильтры
+        </button>
+    </div>
+
+    <div class="board-filter__controls">
+        <project-inline-select class="board-filter__control"
+                               triggerClassName="board-filter__trigger"
+                               [formControl]="criticalityControl"
+                               [items]="projectQuery.criticalities$ | async"
+                               valueKey="id"
+                               labelKey="name"
+                               placeholder="Приоритет"
+                               [allowClear]="true"
+                               [multiple]="true">
+        </project-inline-select>
+
+        <project-inline-select class="board-filter__control"
+                               triggerClassName="board-filter__trigger"
+                               [formControl]="statusControl"
+                               [items]="projectQuery.statuses$ | async"
+                               valueKey="id"
+                               labelKey="name"
+                               placeholder="Статус"
+                               [allowClear]="true">
+        </project-inline-select>
+
+        <project-inline-select class="board-filter__control"
+                               triggerClassName="board-filter__trigger"
+                               [formControl]="assigneeControl"
+                               [items]="projectQuery.users$ | async"
+                               valueKey="id"
+                               labelKey="name"
+                               placeholder="Исполнитель"
+                               [allowClear]="true">
+        </project-inline-select>
+
+        <project-inline-select class="board-filter__control"
+                               triggerClassName="board-filter__trigger"
+                               [formControl]="issueTypeControl"
+                               [items]="issueTypeOptions"
+                               valueKey="value"
+                               labelKey="label"
+                               placeholder="Тип задачи"
+                               [allowClear]="true"
+                               [selectedTemplate]="issueTypeSelectedTemplate"
+                               [optionTemplate]="issueTypeOptionTemplate">
+        </project-inline-select>
+    </div>
+</section>
+
+<ng-template #issueTypeOptionTemplate
+             let-type>
+    <div class="flex items-center">
+        <svg-icon [name]="type.icon"
+                  [size]="18">
+        </svg-icon>
+        <span class="ml-2 font-semibold uppercase text-textMedium text-13">{{ type.label }}</span>
+    </div>
+</ng-template>
+
+<ng-template #issueTypeSelectedTemplate
+             let-selected>
+    <div class="flex items-center">
+        <svg-icon [name]="selected?.icon"
+                  [size]="18">
+        </svg-icon>
+        <span class="ml-2 font-semibold uppercase text-textMedium text-13">{{ selected?.label }}</span>
+    </div>
+</ng-template>

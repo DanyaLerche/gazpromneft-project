@@ -1,0 +1,61 @@
+<section class="auth-card">
+    <div class="auth-card__eyebrow">Verification</div>
+    <h1 class="auth-card__title">Подтверждение email</h1>
+    <p class="auth-card__description">
+        Мы отправили код подтверждения на <strong>{{ email }}</strong>. Введите его, чтобы завершить регистрацию.
+    </p>
+
+    <div *ngIf="infoMessage"
+         class="auth-card__message auth-card__message--success">
+        {{ infoMessage }}
+    </div>
+
+    <div *ngIf="serverError"
+         class="auth-card__message auth-card__message--error">
+        {{ serverError }}
+    </div>
+
+    <form class="auth-form"
+          [formGroup]="form"
+          (ngSubmit)="submit()">
+        <label class="auth-form__field">
+            <span class="auth-form__label">Код подтверждения</span>
+            <input class="form-input auth-form__input"
+                   type="text"
+                   formControlName="code"
+                   autocomplete="one-time-code"
+                   placeholder="Например, 123456" />
+            <span *ngIf="form.get('code')?.touched && form.get('code')?.hasError('required')"
+                  class="auth-form__error">
+                Укажите код подтверждения.
+            </span>
+            <span *ngIf="form.get('code')?.touched && (form.get('code')?.hasError('minlength') || form.get('code')?.hasError('maxlength'))"
+                  class="auth-form__error">
+                Введите корректный код.
+            </span>
+            <span *ngIf="form.get('code')?.touched && form.get('code')?.hasError('whitespace')"
+                  class="auth-form__error">
+                Код не может состоять только из пробелов.
+            </span>
+        </label>
+
+        <div class="auth-card__actions">
+            <button class="auth-form__submit"
+                    type="submit"
+                    [disabled]="isSubmitting">
+                {{ isSubmitting ? 'Проверяем...' : 'Подтвердить email' }}
+            </button>
+            <button class="auth-link-button auth-link-button--secondary"
+                    type="button"
+                    [disabled]="isResending"
+                    (click)="resend()">
+                {{ isResending ? 'Отправляем...' : 'Отправить код снова' }}
+            </button>
+        </div>
+    </form>
+
+    <div class="auth-card__footer">
+        Уже подтвердили?
+        <a [routerLink]="['/auth/login']" [queryParams]="{ email: email }">Перейти ко входу</a>
+    </div>
+</section>

@@ -1,0 +1,79 @@
+<div class="user-profile-popover">
+    <div class="user-profile-popover__header">
+        <div *ngIf="avatarUrl; else userProfileInitialTmpl"
+             class="user-profile-popover__avatar user-profile-popover__avatar--image">
+            <j-avatar [avatarUrl]="avatarUrl"
+                      [size]="76"
+                      className="user-profile-popover__avatar-image">
+            </j-avatar>
+        </div>
+
+        <ng-template #userProfileInitialTmpl>
+            <div class="user-profile-popover__avatar">
+                {{ displayInitial }}
+            </div>
+        </ng-template>
+
+        <div class="user-profile-popover__identity">
+            <div class="user-profile-popover__name">{{ user?.name || 'Пользователь' }}</div>
+            <div class="user-profile-popover__email">{{ user?.email || 'Email не указан' }}</div>
+        </div>
+    </div>
+
+    <div class="user-profile-popover__actions">
+        <label class="user-profile-popover__action user-profile-popover__action--primary">
+            <input class="user-profile-popover__file-input"
+                   type="file"
+                   [accept]="acceptedAvatarTypes"
+                   [disabled]="isUpdatingAvatar"
+                   (change)="updateAvatar($event)" />
+            <span>
+                {{ isUpdatingAvatar ? 'Сохранение...' : (avatarUrl ? 'Заменить аватар' : 'Загрузить аватар') }}
+            </span>
+        </label>
+
+        <button *ngIf="avatarUrl"
+                class="user-profile-popover__action user-profile-popover__action--ghost"
+                type="button"
+                [disabled]="isUpdatingAvatar"
+                (click)="removeAvatar()">
+            Удалить
+        </button>
+    </div>
+
+    <div *ngIf="avatarErrorMessage"
+         class="user-profile-popover__error">
+        {{ avatarErrorMessage }}
+    </div>
+
+    <div class="user-profile-popover__grid">
+        <div class="user-profile-popover__field">
+            <div class="user-profile-popover__label">Имя</div>
+            <div class="user-profile-popover__value">{{ user?.name || 'Не указано' }}</div>
+        </div>
+
+        <div class="user-profile-popover__field">
+            <div class="user-profile-popover__label">Email</div>
+            <div class="user-profile-popover__value">{{ user?.email || 'Не указано' }}</div>
+        </div>
+
+        <div class="user-profile-popover__field">
+            <div class="user-profile-popover__label">Роль</div>
+            <div class="user-profile-popover__value">{{ role }}</div>
+        </div>
+
+        <div class="user-profile-popover__field">
+            <div class="user-profile-popover__label">Команда</div>
+            <div class="user-profile-popover__value">{{ team }}</div>
+        </div>
+    </div>
+
+    <label class="user-profile-popover__notes">
+        <span class="user-profile-popover__label">Дополнительная информация</span>
+        <textarea class="user-profile-popover__textarea"
+                  rows="4"
+                  [value]="additionalInfo"
+                  placeholder="Добавьте краткую информацию о себе"
+                  (input)="saveAdditionalInfo($event)"></textarea>
+    </label>
+</div>

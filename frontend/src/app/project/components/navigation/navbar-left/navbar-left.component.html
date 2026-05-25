@@ -1,0 +1,49 @@
+<aside class="navbar-left">
+    <div class="navbar-left__content">
+        <div *ngFor="let item of items"
+             class="item">
+            <button class="itemIcon itemIcon--button"
+                    type="button"
+                    [attr.aria-label]="item.tooltip"
+                    (click)="item.handler()">
+                <i class="text-xl text-white"
+                   nz-icon
+                   [nzType]="item.icon"
+                   nzTheme="outline"></i>
+            </button>
+        </div>
+
+        <div class="navbar-left__spacer"></div>
+
+        <div class="item">
+            <a nz-popover
+               nzPopoverPlacement="rightBottom"
+               [nzPopoverContent]="aboutPopoverTmpl"
+               nzPopoverTrigger="click"
+               aria-label="Справка">
+                <div class="itemIcon">
+                    <i class="text-xl text-white"
+                       nz-icon
+                       nzType="question-circle"
+                       nzTheme="fill">
+                    </i>
+                </div>
+            </a>
+        </div>
+    </div>
+</aside>
+
+<ng-template #aboutPopoverTmpl>
+    <div class="about-popover">
+        <p class="mb-2">Это демо-версия трекера задач.</p>
+        <p class="mb-2">Полное описание API доступно в Swagger.</p>
+        <p class="mb-3">
+            Откройте
+            <a class="font-semibold"
+               href="http://localhost:8000/docs"
+               target="_blank"
+            >документацию Swagger</a>
+            для просмотра и тестирования всех эндпоинтов.
+        </p>
+    </div>
+</ng-template>

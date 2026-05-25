@@ -1,0 +1,38 @@
+# macOS
+.DS_Store
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.angular/
+.vite/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Java
+target/
+*.class
+
+# Docker/local data
+docker-data/

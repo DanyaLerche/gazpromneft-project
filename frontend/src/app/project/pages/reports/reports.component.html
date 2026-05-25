@@ -1,0 +1,276 @@
+<div class="reports-page">
+    <breadcrumbs [items]="breadcrumbs"></breadcrumbs>
+
+    <header class="reports-page__header">
+        <div>
+            <h1 class="reports-page__title">Отчеты и дашборды проекта</h1>
+            <p class="reports-page__description">
+                Сводная аналитика по задачам и трудозатратам с детализацией по исполнителям.
+            </p>
+        </div>
+
+        <div class="reports-page__actions">
+            <button class="reports-page__widget-settings"
+                    type="button"
+                    (click)="toggleWidgetSettings()">
+                {{ showWidgetSettings ? 'Скрыть виджеты' : 'Настроить виджеты' }}
+            </button>
+            <button class="reports-page__export"
+                    type="button"
+                    [disabled]="isLoading || exportingFormat !== null"
+                    (click)="exportDashboard('csv')">
+                {{ isExporting('csv') ? 'Скачиваю CSV...' : 'CSV' }}
+            </button>
+            <button class="reports-page__export"
+                    type="button"
+                    [disabled]="isLoading || exportingFormat !== null"
+                    (click)="exportDashboard('excel')">
+                {{ isExporting('excel') ? 'Скачиваю Excel...' : 'Excel' }}
+            </button>
+            <button class="reports-page__refresh"
+                    type="button"
+                    [disabled]="isLoading || exportingFormat !== null"
+                    (click)="reload()">
+                {{ isLoading ? 'Обновляю...' : 'Обновить' }}
+            </button>
+        </div>
+    </header>
+
+    <section class="reports-card reports-card--settings"
+             *ngIf="showWidgetSettings">
+        <div class="reports-card__title-row">
+            <h2 class="reports-card__title">Виджеты дашборда</h2>
+            <button class="reports-page__widget-reset"
+                    type="button"
+                    (click)="resetWidgetSettings()">
+                Сбросить
+            </button>
+        </div>
+        <div class="reports-widget-grid">
+            <label *ngFor="let widget of widgetOptions"
+                   class="reports-widget-option">
+                <input type="checkbox"
+                       [checked]="isWidgetVisible(widget.id)"
+                       (change)="onWidgetVisibilityChange(widget.id, $event)" />
+                <span>{{ widget.label }}</span>
+            </label>
+        </div>
+        <p class="reports-card__text reports-card__text--compact">
+            Выберите, какие блоки показывать на дашборде. Настройки сохраняются локально.
+        </p>
+    </section>
+
+    <div *ngIf="errorMessage"
+         class="reports-alert reports-alert--error">
+        {{ errorMessage }}
+    </div>
+    <div *ngIf="exportErrorMessage"
+         class="reports-alert reports-alert--error">
+        {{ exportErrorMessage }}
+    </div>
+
+    <ng-container *ngIf="isWidgetVisible('taskSummary')">
+        <section class="reports-card"
+                 *ngIf="report as currentReport">
+            <div class="reports-card__title-row">
+                <h2 class="reports-card__title">Сводка задач</h2>
+                <span class="reports-card__meta">
+                    Сформирован: {{ currentReport.generatedAt | date: 'dd.MM.yyyy HH:mm' }}
+                </span>
+            </div>
+
+            <div class="reports-kpi-grid">
+                <div class="reports-kpi">
+                    <div class="reports-kpi__label">Всего задач</div>
+                    <div class="reports-kpi__value">{{ currentReport.taskSummary.total }}</div>
+                </div>
+                <div class="reports-kpi reports-kpi--done">
+                    <div class="reports-kpi__label">Выполнено</div>
+                    <div class="reports-kpi__value">{{ currentReport.taskSummary.completed }}</div>
+                </div>
+                <div class="reports-kpi reports-kpi--progress">
+                    <div class="reports-kpi__label">В работе</div>
+                    <div class="reports-kpi__value">{{ currentReport.taskSummary.inProgress }}</div>
+                </div>
+                <div class="reports-kpi reports-kpi--todo">
+                    <div class="reports-kpi__label">Не начато</div>
+                    <div class="reports-kpi__value">{{ currentReport.taskSummary.notStarted }}</div>
+                </div>
+            </div>
+        </section>
+    </ng-container>
+
+    <ng-container *ngIf="isWidgetVisible('tasksByAssignee')">
+        <section class="reports-card"
+                 *ngIf="report as currentReport">
+            <h2 class="reports-card__title">Задачи по исполнителям</h2>
+            <table class="reports-table">
+                <thead>
+                    <tr>
+                        <th>Исполнитель</th>
+                        <th>Выполнено</th>
+                        <th>В работе</th>
+                        <th>Не начато</th>
+                        <th>Всего</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let row of currentReport.tasksByAssignee">
+                        <td>{{ row.assigneeName }}</td>
+                        <td>{{ row.completed }}</td>
+                        <td>{{ row.inProgress }}</td>
+                        <td>{{ row.notStarted }}</td>
+                        <td>{{ row.total }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </ng-container>
+
+    <ng-container *ngIf="isWidgetVisible('effort')">
+        <section class="reports-card"
+                 *ngIf="report as currentReport">
+            <div class="reports-card__title-row">
+                <h2 class="reports-card__title">Трудозатраты (план/факт)</h2>
+                <span class="reports-card__meta">
+                    Отклонение: {{ currentReport.effortSummary.varianceHours | number: '1.0-2' }} ч
+                </span>
+            </div>
+
+            <div class="reports-kpi-grid reports-kpi-grid--effort">
+                <div class="reports-kpi">
+                    <div class="reports-kpi__label">План, ч</div>
+                    <div class="reports-kpi__value">{{ currentReport.effortSummary.plannedHours | number: '1.0-2' }}</div>
+                </div>
+                <div class="reports-kpi">
+                    <div class="reports-kpi__label">Факт, ч</div>
+                    <div class="reports-kpi__value">{{ currentReport.effortSummary.actualHours | number: '1.0-2' }}</div>
+                </div>
+                <div class="reports-kpi">
+                    <div class="reports-kpi__label">Факт/план</div>
+                    <div class="reports-kpi__value">
+                        {{ formatPercent(currentReport.effortSummary.actualVsPlanPercent) }}
+                    </div>
+                </div>
+            </div>
+
+            <table class="reports-table">
+                <thead>
+                    <tr>
+                        <th>Исполнитель</th>
+                        <th>План, ч</th>
+                        <th>Факт, ч</th>
+                        <th>Отклонение, ч</th>
+                        <th>Факт/план</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let row of currentReport.effortByAssignee">
+                        <td>{{ row.assigneeName }}</td>
+                        <td>{{ row.plannedHours | number: '1.0-2' }}</td>
+                        <td>{{ row.actualHours | number: '1.0-2' }}</td>
+                        <td>{{ row.varianceHours | number: '1.0-2' }}</td>
+                        <td>{{ formatPercent(row.actualVsPlanPercent) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </ng-container>
+
+    <section class="reports-grid"
+             *ngIf="report as currentReport"
+             [hidden]="!isWidgetVisible('statusDistribution') && !isWidgetVisible('workload')">
+        <article *ngIf="isWidgetVisible('statusDistribution')"
+                 class="reports-card">
+            <h2 class="reports-card__title">Распределение по статусам</h2>
+            <ul class="reports-list">
+                <li *ngFor="let item of currentReport.statusDistribution">
+                    <span>{{ item.statusName }}</span>
+                    <span>{{ item.tasksCount }}</span>
+                </li>
+            </ul>
+        </article>
+
+        <article *ngIf="isWidgetVisible('workload')"
+                 class="reports-card">
+            <h2 class="reports-card__title">Нагрузка исполнителей</h2>
+            <ul class="reports-list">
+                <li *ngFor="let item of currentReport.workload">
+                    <span>{{ item.assigneeName }}</span>
+                    <span>{{ item.openTasks }} задач / {{ item.plannedHoursOpenTasks | number: '1.0-2' }} ч</span>
+                </li>
+            </ul>
+        </article>
+    </section>
+
+    <section class="reports-grid"
+             *ngIf="report as currentReport"
+             [hidden]="!isWidgetVisible('overdue') && !isWidgetVisible('recentActivity')">
+        <article *ngIf="isWidgetVisible('overdue')"
+                 class="reports-card">
+            <h2 class="reports-card__title">Просроченные задачи</h2>
+            <p class="reports-card__text">
+                Всего просрочено: <strong>{{ currentReport.overdue.totalOverdueTasks }}</strong>
+            </p>
+            <ul class="reports-list">
+                <li *ngFor="let item of currentReport.overdue.overdueByAssignee">
+                    <span>{{ item.assigneeName }}</span>
+                    <span>{{ item.tasksCount }}</span>
+                </li>
+            </ul>
+        </article>
+
+        <article *ngIf="isWidgetVisible('recentActivity')"
+                 class="reports-card">
+            <h2 class="reports-card__title">Активность за {{ currentReport.recentActivity.days }} дней</h2>
+            <ul class="reports-list">
+                <li>
+                    <span>Создано задач</span>
+                    <span>{{ currentReport.recentActivity.createdTasks }}</span>
+                </li>
+                <li>
+                    <span>Завершено задач</span>
+                    <span>{{ currentReport.recentActivity.completedTasks }}</span>
+                </li>
+                <li>
+                    <span>Залогировано часов</span>
+                    <span>{{ currentReport.recentActivity.loggedHours | number: '1.0-2' }}</span>
+                </li>
+                <li>
+                    <span>Эффективность (закрыто/создано)</span>
+                    <span>{{ formatPercent(currentReport.recentActivity.completionToCreationPercent) }}</span>
+                </li>
+            </ul>
+        </article>
+    </section>
+
+    <ng-container *ngIf="isWidgetVisible('overdueTop')">
+        <section class="reports-card"
+                 *ngIf="report as currentReport">
+            <h2 class="reports-card__title">Топ просроченных задач</h2>
+            <table class="reports-table">
+                <thead>
+                    <tr>
+                        <th>Задача</th>
+                        <th>Исполнитель</th>
+                        <th>Срок</th>
+                        <th>Просрочка, дней</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let item of currentReport.overdue.tasks">
+                        <td>{{ item.issueKey }} — {{ item.title }}</td>
+                        <td>{{ item.assigneeName }}</td>
+                        <td>{{ item.dueDate | date: 'dd.MM.yyyy' }}</td>
+                        <td>{{ item.daysOverdue }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </ng-container>
+
+    <div *ngIf="!isLoading && !report && !errorMessage"
+         class="reports-empty">
+        Нет данных для формирования отчета.
+    </div>
+</div>

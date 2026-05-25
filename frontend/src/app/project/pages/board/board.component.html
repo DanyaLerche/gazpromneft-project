@@ -1,0 +1,49 @@
+<div class="board-page">
+    <header class="board-page__hero">
+        <div class="board-page__hero-copy">
+            <div class="board-page__eyebrow">Рабочее пространство</div>
+            <h1 class="board-page__title">Канбан-доска</h1>
+            <p class="board-page__subtitle">
+                Управляйте задачами, приоритетами и командой в современном SaaS-интерфейсе.
+            </p>
+        </div>
+    </header>
+
+    <dashboard-stats></dashboard-stats>
+    <filter-toolbar></filter-toolbar>
+
+    <div *ngIf="projectQuery.error$ | async as error"
+         class="board-page__error">
+        {{ error?.error?.error?.message || 'Не удалось загрузить данные доски.' }}
+    </div>
+
+    <div *ngIf="projectQuery.isLoading$ | async"
+         class="board-page__loading">
+        <div class="board-page__loading-column"
+             *ngFor="let skeleton of [1,2,3,4]">
+            <div class="board-page__loading-header"></div>
+            <div class="board-page__loading-card"
+                 *ngFor="let card of [1,2,3]"></div>
+        </div>
+    </div>
+
+    <ng-container *ngIf="!(projectQuery.isLoading$ | async)">
+        <div *ngIf="showNoStatuses$ | async"
+             class="board-page__empty board-page__empty--status">
+            <div class="board-page__empty-title">В проекте пока нет колонок</div>
+            <div class="board-page__empty-description">
+                Базовые статусы создаются автоматически при первой загрузке доски. Обновите страницу, если они ещё не появились.
+            </div>
+        </div>
+
+        <div *ngIf="showNoResults$ | async"
+             class="board-page__empty board-page__empty--filters">
+            <div class="board-page__empty-title">По текущим фильтрам ничего не найдено</div>
+            <div class="board-page__empty-description">
+                Сбросьте фильтры на панели выше и попробуйте другой запрос.
+            </div>
+        </div>
+
+        <kanban-board></kanban-board>
+    </ng-container>
+</div>

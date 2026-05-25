@@ -1,0 +1,50 @@
+<header class="top-navbar panel-surface">
+    <div class="top-navbar__left">
+        <button class="top-navbar__menu"
+                type="button"
+                aria-label="Открыть навигацию"
+                (click)="menuClick.emit()">
+            <svg-icon name="component"
+                      [size]="18">
+            </svg-icon>
+        </button>
+
+        <div class="top-navbar__breadcrumbs">
+            <div class="top-navbar__crumb top-navbar__crumb--muted">Проекты</div>
+            <span class="top-navbar__separator">/</span>
+            <div class="top-navbar__crumb">{{ projectName || 'Рабочее пространство' }}</div>
+            <span class="top-navbar__separator">·</span>
+            <div class="top-navbar__crumb top-navbar__crumb--key">{{ projectKey || 'KANBAN' }}</div>
+        </div>
+    </div>
+
+    <label class="top-navbar__search"
+           [class.top-navbar__search--hidden]="!showBoardActions"
+           aria-label="Глобальный поиск">
+        <svg-icon class="top-navbar__search-icon"
+                  name="search"
+                  [size]="16">
+        </svg-icon>
+        <input class="top-navbar__search-input"
+               type="search"
+               [value]="searchQuery"
+               [disabled]="!showBoardActions || loading"
+               placeholder="Поиск задач, тикетов и участников..."
+               (input)="onSearchInput($event)" />
+    </label>
+
+    <div class="top-navbar__actions">
+        <button *ngIf="showBoardActions"
+                class="top-navbar__create"
+                type="button"
+                (click)="createIssue.emit()">
+            <svg-icon name="plus"
+                      [size]="16">
+            </svg-icon>
+            <span>Создать</span>
+        </button>
+
+
+        <ng-content select="[top-navbar-profile]"></ng-content>
+    </div>
+</header>

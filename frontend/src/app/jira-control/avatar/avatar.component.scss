@@ -1,0 +1,16 @@
+.avatar-container {
+  align-items: center;
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  color: #46359d;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 700;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.avatar-container--fallback {
+  background: linear-gradient(135deg, rgba(108, 76, 241, 0.18) 0%, rgba(139, 92, 246, 0.16) 100%);
+}

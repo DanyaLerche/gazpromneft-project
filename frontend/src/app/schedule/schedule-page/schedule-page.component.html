@@ -1,0 +1,602 @@
+<svg-definitions></svg-definitions>
+
+<div class="schedule-shell schedule-shell--compact-sidebar">
+    <aside class="schedule-app-sidebar schedule-app-sidebar--compact"
+           aria-label="Навигация платформы проектов">
+        <div class="schedule-app-sidebar__brand">
+            <div class="schedule-app-sidebar__brand-mark"
+                 aria-hidden="true">
+                <span></span>
+            </div>
+
+            <div class="schedule-app-sidebar__brand-copy">
+                <div class="schedule-app-sidebar__brand-title">ПЛАТФОРМА ПРОЕКТОВ</div>
+                <div class="schedule-app-sidebar__brand-subtitle">Рабочее пространство проектов</div>
+            </div>
+        </div>
+
+        <nav class="schedule-app-sidebar__nav">
+            <a class="schedule-app-sidebar__link"
+               routerLink="/projects">
+                <span class="schedule-app-sidebar__link-icon">
+                    <svg-icon name="board"
+                              [size]="18"></svg-icon>
+                </span>
+                <span>Системная панель</span>
+            </a>
+        </nav>
+    </aside>
+
+    <div class="schedule-main">
+        <header class="schedule-topbar">
+            <div class="schedule-topbar__left">
+                <a class="schedule-topbar__brand"
+                   routerLink="/projects"
+                   aria-label="Вернуться к проектам">
+                    <div class="schedule-topbar__brand-mark"
+                         aria-hidden="true">
+                        <span></span>
+                    </div>
+                    <div class="schedule-topbar__brand-title">Платформа проектов</div>
+                </a>
+                <div class="schedule-topbar__crumbs">Главная / Календарь</div>
+                <div class="schedule-topbar__subtitle">Личное планирование задач и фактических часов</div>
+            </div>
+
+            <label class="schedule-search">
+                <span class="schedule-search__icon"
+                      aria-hidden="true">
+                    <svg-icon name="search"
+                              [size]="18"></svg-icon>
+                </span>
+                <input class="schedule-search__input"
+                       placeholder="Поиск по задачам, датам и списаниям..."
+                       aria-label="Поиск по календарю" />
+            </label>
+
+            <div class="schedule-topbar__actions">
+                <button class="schedule-create-button"
+                        type="button"
+                        (click)="openCurrentMoment()">
+                    <svg-icon name="plus"
+                              [size]="16"></svg-icon>
+                    <span>Задача сейчас</span>
+                </button>
+
+                <ng-container *ngIf="authQuery.user$ | async as user">
+                    <button class="schedule-profile"
+                            type="button"
+                            nz-popover
+                            nzPopoverPlacement="bottomRight"
+                            [nzPopoverContent]="scheduleUserProfileTmpl"
+                            nzPopoverTrigger="click"
+                            aria-label="Открыть профиль пользователя">
+                        <j-avatar *ngIf="user.avatarUrl; else scheduleUserInitialTmpl"
+                                  [avatarUrl]="user.avatarUrl"
+                                  [size]="38"
+                                  className="schedule-profile__avatar schedule-profile__avatar--image">
+                        </j-avatar>
+
+                        <ng-template #scheduleUserInitialTmpl>
+                            <div class="schedule-profile__avatar">
+                                {{ getUserInitial(user) }}
+                            </div>
+                        </ng-template>
+
+                        <div class="schedule-profile__copy">
+                            <div class="schedule-profile__name">{{ user.name }}</div>
+                            <div class="schedule-profile__role">{{ currentProfileRole }}</div>
+                        </div>
+                    </button>
+
+                    <ng-template #scheduleUserProfileTmpl>
+                        <j-user-profile-popover [user]="user"
+                                                [role]="currentProfileRole"
+                                                [team]="profileTeam"
+                                                [info]="profileInfo">
+                        </j-user-profile-popover>
+                    </ng-template>
+                </ng-container>
+
+                <button class="schedule-logout"
+                        type="button"
+                        [disabled]="isLoggingOut"
+                        [attr.aria-label]="isLoggingOut ? 'Выход...' : 'Выйти'"
+                        (click)="logout()">
+                    {{ isLoggingOut ? 'Выход...' : 'Выйти' }}
+                </button>
+            </div>
+        </header>
+
+        <main class="schedule-content">
+            <section class="schedule-hero">
+                <div class="schedule-hero__copy">
+                    <div class="schedule-hero__eyebrow">Личное планирование</div>
+                    <h1 class="schedule-hero__title">Календарь задач</h1>
+                    <p class="schedule-hero__description">
+                        Планируйте рабочую неделю, фиксируйте фактические часы и связывайте
+                        списания с задачами проекта.
+                    </p>
+                </div>
+
+                <div class="schedule-hero__summary">
+                    <div class="schedule-hero__summary-label">Текущая неделя</div>
+                    <div class="schedule-hero__summary-value">{{ weekLabel }}</div>
+                    <div class="schedule-hero__summary-meta">{{ visiblePeriodLabel }}</div>
+                    <div class="schedule-hero__timezone">{{ timezoneLabel }}</div>
+                </div>
+            </section>
+
+            <section class="schedule-stats"
+                     aria-label="Показатели календаря">
+                <article class="schedule-stat schedule-stat--primary">
+                    <div class="schedule-stat__icon">
+                        <svg-icon name="star"
+                                  [size]="20"></svg-icon>
+                    </div>
+                    <div>
+                        <div class="schedule-stat__label">Выбран день</div>
+                        <div class="schedule-stat__value schedule-stat__value--date">{{ focusedDateLabel }}</div>
+                        <div class="schedule-stat__description">Активная дата планирования</div>
+                    </div>
+                </article>
+
+                <article class="schedule-stat schedule-stat--info">
+                    <div class="schedule-stat__icon">
+                        <svg-icon name="board"
+                                  [size]="20"></svg-icon>
+                    </div>
+                    <div>
+                        <div class="schedule-stat__label">Задач за неделю</div>
+                        <div class="schedule-stat__value">{{ totalSchedules }}</div>
+                        <div class="schedule-stat__description">Плановые блоки в календаре</div>
+                    </div>
+                </article>
+
+                <article class="schedule-stat schedule-stat--success">
+                    <div class="schedule-stat__icon">
+                        <svg-icon name="component"
+                                  [size]="20"></svg-icon>
+                    </div>
+                    <div>
+                        <div class="schedule-stat__label">Плановые часы</div>
+                        <div class="schedule-stat__value">{{ formatHours(totalPlannedHours) }}</div>
+                        <div class="schedule-stat__description">Запланированная нагрузка</div>
+                    </div>
+                </article>
+
+                <article class="schedule-stat schedule-stat--warning">
+                    <div class="schedule-stat__icon">
+                        <svg-icon name="report"
+                                  [size]="20"></svg-icon>
+                    </div>
+                    <div>
+                        <div class="schedule-stat__label">Фактические часы</div>
+                        <div class="schedule-stat__value">{{ formatHours(totalActualHours) }}</div>
+                        <div class="schedule-stat__description">Списано по worklog</div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="schedule-calendar-layout">
+                <aside class="schedule-calendar-sidebar">
+                    <section class="schedule-panel">
+                        <div class="schedule-mini-calendar">
+                            <div class="schedule-mini-calendar__header">
+                                <button class="schedule-icon-button"
+                                        type="button"
+                                        aria-label="Предыдущий месяц"
+                                        (click)="previousMonth()">
+                                    ‹
+                                </button>
+
+                                <div class="schedule-mini-calendar__title">{{ monthLabel }}</div>
+
+                                <button class="schedule-icon-button"
+                                        type="button"
+                                        aria-label="Следующий месяц"
+                                        (click)="nextMonth()">
+                                    ›
+                                </button>
+                            </div>
+
+                            <div class="schedule-mini-calendar__weekdays">
+                                <span *ngFor="let label of weekDayLabels">{{ label }}</span>
+                            </div>
+
+                            <div class="schedule-mini-calendar__grid">
+                                <button *ngFor="let day of miniCalendarDays; trackBy: trackByMiniCalendarDay"
+                                        class="schedule-mini-calendar__day"
+                                        [class.schedule-mini-calendar__day--muted]="!day.isCurrentMonth"
+                                        [class.schedule-mini-calendar__day--today]="day.isToday"
+                                        [class.schedule-mini-calendar__day--focused]="day.isFocused"
+                                        [class.schedule-mini-calendar__day--in-week]="day.isInFocusedWeek"
+                                        type="button"
+                                        [attr.aria-label]="day.iso"
+                                        (click)="selectMiniCalendarDay(day)">
+                                    <span>{{ day.dayNumber }}</span>
+                                    <span *ngIf="day.hasSchedule"
+                                          class="schedule-mini-calendar__day-dot"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="schedule-panel schedule-panel--legend">
+                        <header class="schedule-panel__header">
+                            <h2 class="schedule-panel__title">Легенда</h2>
+                        </header>
+
+                        <div class="schedule-legend">
+                            <div class="schedule-legend__item">
+                                <span class="schedule-legend__dot schedule-legend__dot--planned"></span>
+                                <div>
+                                    <div class="schedule-legend__title">Плановые блоки</div>
+                                    <div class="schedule-legend__text">То, что вы планируете сделать в день.</div>
+                                </div>
+                            </div>
+
+                            <div class="schedule-legend__item">
+                                <span class="schedule-legend__dot schedule-legend__dot--actual"></span>
+                                <div>
+                                    <div class="schedule-legend__title">Фактические списания</div>
+                                    <div class="schedule-legend__text">Worklog, связанный с задачами проектов.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                </aside>
+
+                <section class="schedule-planner-card">
+                    <header class="schedule-week-toolbar">
+                        <div class="schedule-week-toolbar__navigation">
+                            <button class="schedule-icon-button"
+                                    type="button"
+                                    aria-label="Предыдущая неделя"
+                                    (click)="previousWeek()">
+                                ‹
+                            </button>
+
+                            <button class="schedule-icon-button"
+                                    type="button"
+                                    aria-label="Следующая неделя"
+                                    (click)="nextWeek()">
+                                ›
+                            </button>
+
+                            <button class="schedule-pill-button"
+                                    type="button"
+                                    (click)="goToToday()">
+                                Сегодня
+                            </button>
+                        </div>
+
+                        <div class="schedule-week-toolbar__heading">
+                            <div class="schedule-week-toolbar__eyebrow">Неделя</div>
+                            <h2 class="schedule-week-toolbar__title">{{ weekLabel }}</h2>
+                            <div class="schedule-week-toolbar__period">{{ visiblePeriodLabel }}</div>
+                        </div>
+
+                        <div class="schedule-week-toolbar__chips">
+                            <span class="schedule-chip">{{ timezoneLabel }}</span>
+                            <span class="schedule-chip">{{ totalSchedules }} задач</span>
+                            <span class="schedule-chip schedule-chip--planned">
+                                План: {{ formatHours(totalPlannedHours) }}
+                            </span>
+                            <span class="schedule-chip schedule-chip--actual">
+                                Факт: {{ formatHours(totalActualHours) }}
+                            </span>
+                        </div>
+                    </header>
+
+                    <div *ngIf="isLoading"
+                         class="schedule-state">
+                        <div class="schedule-state__spinner"></div>
+                        <div class="schedule-state__copy">
+                            <div class="schedule-state__title">Загружаю календарь</div>
+                            <p class="schedule-state__description">
+                                Получаю данные за период {{ visiblePeriodLabel }}.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div *ngIf="!isLoading && errorMessage"
+                         class="schedule-state schedule-state--error">
+                        <div class="schedule-state__copy">
+                            <div class="schedule-state__title">Не удалось открыть календарь</div>
+                            <p class="schedule-state__description">{{ errorMessage }}</p>
+                        </div>
+
+                        <button class="schedule-create-button"
+                                type="button"
+                                (click)="retryLoad()">
+                            Повторить
+                        </button>
+                    </div>
+
+                    <ng-container *ngIf="!isLoading && !errorMessage">
+                        <div *ngIf="!totalSchedules"
+                             class="schedule-empty-week">
+                            <div class="schedule-empty-week__icon">
+                                <svg-icon name="star"
+                                          [size]="22"></svg-icon>
+                            </div>
+                            <div>
+                                <div class="schedule-empty-week__title">На эту неделю пока нет задач</div>
+                                <p class="schedule-empty-week__description">
+                                    Дважды кликните по сетке или используйте кнопку Задача сейчас.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="schedule-board-frame">
+                            <div class="schedule-board">
+                                <div class="schedule-board__corner">
+                                    <div class="schedule-board__timezone">{{ timezoneLabel }}</div>
+                                    <div class="schedule-board__hint">Двойной клик по сетке</div>
+                                </div>
+
+                                <button *ngFor="let day of plannerDays; trackBy: trackByDay"
+                                        class="schedule-board__day-header"
+                                        [class.schedule-board__day-header--today]="day.isToday"
+                                        [class.schedule-board__day-header--focused]="day.isFocused"
+                                        type="button"
+                                        [attr.title]="getDayTitle(day)"
+                                        (click)="focusDay(day)">
+                                    <span class="schedule-board__day-name">{{ day.weekdayLabel }}</span>
+                                    <span class="schedule-board__day-number">{{ day.dayNumber }}</span>
+                                    <span *ngIf="day.isToday"
+                                          class="schedule-board__today-badge">
+                                        Сегодня
+                                    </span>
+                                    <span class="schedule-board__day-summary"
+                                          [class.schedule-board__day-summary--empty]="!day.hasSchedules">
+                                        {{ day.summaryLabel }}
+                                    </span>
+                                </button>
+
+                                <div class="schedule-board__time-column">
+                                    <div *ngFor="let hour of timeSlots"
+                                         class="schedule-board__time-slot">
+                                        {{ formatTimeSlot(hour) }}
+                                    </div>
+                                </div>
+
+                                <div *ngFor="let day of plannerDays; trackBy: trackByDay"
+                                     class="schedule-board__day-column"
+                                     [class.schedule-board__day-column--today]="day.isToday"
+                                     [class.schedule-board__day-column--weekend]="day.isWeekend"
+                                     [class.schedule-board__day-column--focused]="day.isFocused"
+                                     [attr.aria-label]="getDayTitle(day)"
+                                     role="button"
+                                     tabindex="0"
+                                     (click)="focusDay(day)"
+                                     (dblclick)="createTaskAtPosition($event, day)"
+                                     (keydown)="onPlannerDayKeydown($event, day)">
+                                    <div *ngIf="!day.hasSchedules"
+                                         class="schedule-board__empty">
+                                        Двойной клик — новая задача
+                                    </div>
+
+                                    <div *ngFor="let plannerEvent of day.plannedEvents; trackBy: trackByEvent"
+                                         class="schedule-event"
+                                         [class.schedule-event--zero]="plannerEvent.task.plannedHours <= 0"
+                                         [ngStyle]="plannerEvent.style"
+                                         (click)="openExistingEvent($event, day, plannerEvent.task)"
+                                         (dblclick)="$event.stopPropagation()">
+                                        <div class="schedule-event__topline">
+                                            <div class="schedule-event__time">{{ plannerEvent.timeLabel }}</div>
+                                            <div class="schedule-event__hours">
+                                                {{ formatHours(plannerEvent.task.plannedHours) }}
+                                            </div>
+                                        </div>
+                                        <div class="schedule-event__title">{{ plannerEvent.title }}</div>
+                                    </div>
+
+                                    <div *ngFor="let actualEvent of day.actualEvents; trackBy: trackByActualEvent"
+                                         class="schedule-event schedule-event--actual"
+                                         [ngStyle]="actualEvent.style"
+                                         [attr.title]="actualEvent.issueTitle">
+                                        <div class="schedule-event__topline">
+                                            <div class="schedule-event__badge">Факт</div>
+                                            <div class="schedule-event__hours">{{ actualEvent.hoursLabel }}</div>
+                                        </div>
+                                        <div class="schedule-event__time">{{ actualEvent.timeLabel }}</div>
+                                        <div class="schedule-event__title">{{ actualEvent.issueTitle }}</div>
+                                    </div>
+
+                                    <div *ngIf="currentTimeIndicator?.dayIso === day.iso"
+                                         class="schedule-board__now"
+                                         [style.top]="currentTimeIndicator.top">
+                                        <span class="schedule-board__now-dot"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </ng-container>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <div *ngIf="showEditor"
+         class="schedule-modal"
+         (click)="onBackdropClick($event)">
+        <div class="schedule-modal__dialog"
+             aria-modal="true"
+             aria-labelledby="schedule-editor-title"
+             role="dialog">
+            <button class="schedule-modal__close"
+                    type="button"
+                    aria-label="Закрыть"
+                    [disabled]="isSaving || isDeleting"
+                    (click)="closeEditor()">
+                ×
+            </button>
+
+            <div class="schedule-modal__eyebrow">
+                {{ selectedTask ? 'Редактирование задачи' : 'Новая задача' }}
+            </div>
+            <h2 id="schedule-editor-title"
+                class="schedule-modal__title">
+                {{ selectedDateLabel }}
+            </h2>
+            <p class="schedule-modal__description">
+                Время можно выбрать двойным кликом по сетке или указать вручную. Поле часов не
+                даст выйти за пределы рабочего дня.
+            </p>
+
+            <form [formGroup]="editorForm"
+                  (ngSubmit)="save()">
+                <div class="schedule-modal__grid">
+                    <label class="schedule-modal__field">
+                        <span class="schedule-modal__label">Начало</span>
+                        <input class="schedule-modal__input"
+                               formControlName="startTime"
+                               min="08:00"
+                               max="19:30"
+                               step="1800"
+                               type="time" />
+                    </label>
+
+                    <label class="schedule-modal__field">
+                        <span class="schedule-modal__label">Часы</span>
+                        <input class="schedule-modal__input"
+                               formControlName="plannedHours"
+                               min="0"
+                               [attr.max]="selectedMaxPlannedHours"
+                               step="0.5"
+                               type="number" />
+                    </label>
+                </div>
+
+                <div *ngIf="startTimeControlInvalid"
+                     class="schedule-modal__field-error">
+                    Укажите время в диапазоне 08:00-19:30 с шагом 30 минут.
+                </div>
+
+                <div class="schedule-modal__field-hint">
+                    Доступно до {{ formatHours(selectedMaxPlannedHours) }} до конца рабочего дня.
+                </div>
+
+                <div *ngIf="plannedHoursControlInvalid"
+                     class="schedule-modal__field-error">
+                    {{ plannedHoursErrorMessage }}
+                </div>
+
+                <section class="schedule-modal__worklog">
+                    <div>
+                        <div class="schedule-modal__worklog-title">Списать фактические часы</div>
+                        <p class="schedule-modal__worklog-hint">
+                            Выберите задачу и укажите фактические часы, чтобы записать worklog.
+                        </p>
+                    </div>
+
+                    <label class="schedule-modal__field">
+                        <span class="schedule-modal__label">Задача проекта</span>
+                        <select class="schedule-modal__input"
+                                formControlName="actualIssueId">
+                            <option [ngValue]="null">Не списывать</option>
+                            <option *ngFor="let issue of worklogIssueOptions"
+                                    [ngValue]="issue.id">
+                                {{ issue.label }}
+                            </option>
+                        </select>
+                    </label>
+
+                    <div *ngIf="isLoadingIssueOptions"
+                         class="schedule-modal__field-hint">
+                        Загружаю задачи для списания...
+                    </div>
+
+                    <label class="schedule-modal__field">
+                        <span class="schedule-modal__label">Фактические часы</span>
+                        <input class="schedule-modal__input"
+                               formControlName="actualHours"
+                               min="0"
+                               step="0.5"
+                               type="number" />
+                    </label>
+
+                    <div class="schedule-modal__field-hint">
+                        0 — без списания факта. Значение > 0 создаст или обновит запись факта.
+                    </div>
+                </section>
+
+                <div class="schedule-modal__field">
+                    <span class="schedule-modal__label">Цвет</span>
+
+                    <div class="schedule-color-picker">
+                        <button class="schedule-color-picker__trigger"
+                                type="button"
+                                aria-haspopup="listbox"
+                                [attr.aria-expanded]="showColorDropdown"
+                                [style.--task-color]="selectedTaskColor"
+                                (click)="toggleColorDropdown()">
+                            <span class="schedule-color-picker__trigger-swatch"></span>
+                            <span class="schedule-color-picker__trigger-text">Выбрать цвет</span>
+                            <span class="schedule-color-picker__trigger-chevron">▾</span>
+                        </button>
+
+                        <div *ngIf="showColorDropdown"
+                             class="schedule-color-picker__menu"
+                             role="listbox"
+                             aria-label="Палитра цветов задачи">
+                            <button *ngFor="let option of taskColorOptions"
+                                    class="schedule-color-picker__option"
+                                    [class.schedule-color-picker__option--selected]="selectedTaskColor === option.value"
+                                    type="button"
+                                    [attr.aria-label]="option.label"
+                                    [attr.title]="option.label"
+                                    [style.--task-color]="option.value"
+                                    (click)="selectTaskColor(option.value)">
+                                <span class="schedule-color-picker__swatch"></span>
+                                <span *ngIf="selectedTaskColor === option.value"
+                                      class="schedule-color-picker__check">
+                                    ✓
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <label class="schedule-modal__field">
+                    <span class="schedule-modal__label">Название / комментарий</span>
+                    <textarea class="schedule-modal__textarea"
+                              formControlName="comment"
+                              placeholder="Например: спроектировать UI, созвон с командой, ревью"
+                              rows="4"></textarea>
+                </label>
+
+                <div *ngIf="modalErrorMessage"
+                     class="schedule-modal__error">
+                    {{ modalErrorMessage }}
+                </div>
+
+                <div class="schedule-modal__actions">
+                    <button class="schedule-pill-button"
+                            type="button"
+                            [disabled]="isSaving || isDeleting"
+                            (click)="closeEditor()">
+                        Отмена
+                    </button>
+
+                    <button *ngIf="selectedTask"
+                            class="schedule-danger-button"
+                            type="button"
+                            [disabled]="isSaving || isDeleting"
+                            (click)="confirmDelete()">
+                        {{ isDeleting ? 'Удаление...' : 'Удалить' }}
+                    </button>
+
+                    <button class="schedule-create-button"
+                            type="submit"
+                            [disabled]="isSaving || isDeleting">
+                        {{ isSaving ? 'Сохранение...' : 'Сохранить' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

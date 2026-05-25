@@ -1,0 +1,135 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+}
+
+.board-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 100%;
+  padding: 1rem 1.35rem 1.2rem;
+}
+
+.board-page__hero {
+  padding: 1.2rem 0.2rem 0.25rem;
+}
+
+.board-page__hero-copy {
+  max-width: 44rem;
+}
+
+.board-page__eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #6f5ad2;
+}
+
+.board-page__title {
+  margin: 0.35rem 0 0;
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--color-text-strong);
+  letter-spacing: -0.02em;
+}
+
+.board-page__subtitle {
+  margin: 0.5rem 0 0;
+  font-size: 0.94rem;
+  color: var(--color-text-muted);
+}
+
+.board-page__error {
+  margin-top: 0.9rem;
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 0.9rem;
+  background: rgba(255, 244, 244, 0.86);
+  padding: 0.8rem 1rem;
+  font-size: 0.84rem;
+  color: #b42318;
+}
+
+.board-page__empty {
+  display: grid;
+  justify-items: center;
+  margin-top: 1rem;
+  border: 1px dashed rgba(108, 76, 241, 0.24);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 2rem 1.2rem;
+  text-align: center;
+}
+
+.board-page__empty-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+
+.board-page__empty-description {
+  margin-top: 0.4rem;
+  max-width: 30rem;
+  font-size: 0.84rem;
+  color: var(--color-text-muted);
+}
+
+.board-page__loading {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-bottom: 1rem;
+  overflow-x: auto;
+}
+
+.board-page__loading-column {
+  flex: 0 0 19rem;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 1.1rem;
+  background: rgba(255, 255, 255, 0.75);
+  padding: 0.85rem;
+}
+
+.board-page__loading-header,
+.board-page__loading-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.8rem;
+  background: #edf0f7;
+}
+
+.board-page__loading-header::after,
+.board-page__loading-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+  animation: board-loading-shimmer 1.2s infinite;
+}
+
+.board-page__loading-header {
+  height: 2.2rem;
+}
+
+.board-page__loading-card {
+  margin-top: 0.6rem;
+  height: 6.4rem;
+}
+
+@keyframes board-loading-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (max-width: 767px) {
+  .board-page {
+    padding: 0.8rem 0.85rem 1rem;
+  }
+}

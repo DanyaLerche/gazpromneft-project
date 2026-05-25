@@ -1,0 +1,126 @@
+<ng-container *ngIf="projectQuery.project$ | async as project">
+    <div *ngIf="project.id; else projectStateTmpl"
+         class="project-shell">
+        <div class="project-shell__mobile-overlay"
+             *ngIf="mobileNavOpen"
+             (click)="closeMobileNavigation()">
+        </div>
+
+        <app-navigation class="project-shell__navigation"
+                        [expanded]="expanded"
+                        [mobileOpen]="mobileNavOpen"
+                        (manualToggle)="manualToggle()">
+        </app-navigation>
+
+        <div class="project-shell__main">
+            <top-navbar *ngIf="isBoardRoute"
+                        [projectName]="project.name"
+                        [projectKey]="project.key"
+                        [searchQuery]="searchQuery"
+                        [showBoardActions]="isBoardRoute"
+                        [loading]="(projectQuery.isLoading$ | async) ?? false"
+                        (searchChanged)="onSearchQueryChange($event)"
+                        (createIssue)="openCreateIssueModal()"
+                        (menuClick)="manualToggle()">
+                <div class="project-shell__header-actions"
+                     top-navbar-profile>
+                    <a class="project-shell__header-link"
+                       routerLink="/schedule">
+                        Календарь
+                    </a>
+
+                    <ng-container *ngIf="authQuery.user$ | async as user">
+                        <button class="project-shell__user"
+                                type="button"
+                                nz-popover
+                                nzPopoverPlacement="bottomRight"
+                                [nzPopoverContent]="projectUserProfileTmpl"
+                                nzPopoverTrigger="click"
+                                [attr.title]="user.name"
+                                aria-label="Открыть профиль пользователя">
+                            <j-avatar *ngIf="user.avatarUrl; else projectUserInitialTmpl"
+                                      [avatarUrl]="user.avatarUrl"
+                                      [size]="34"
+                                      className="project-shell__user-avatar project-shell__user-avatar--image">
+                            </j-avatar>
+
+                            <ng-template #projectUserInitialTmpl>
+                                <div class="project-shell__user-avatar">
+                                    {{ getUserInitial(user) }}
+                                </div>
+                            </ng-template>
+
+                            <div class="project-shell__user-copy">
+                                <div class="project-shell__user-name">{{ user.name }}</div>
+                                <div class="project-shell__user-email">{{ user.email }}</div>
+                            </div>
+                        </button>
+
+                        <ng-template #projectUserProfileTmpl>
+                            <j-user-profile-popover [user]="user"
+                                                    [role]="getCurrentUserProjectRole(project.currentUserRole)"
+                                                    [team]="project.name || 'Команда проекта'"
+                                                    [info]="getProjectProfileInfo(project.name, project.key)">
+                            </j-user-profile-popover>
+                        </ng-template>
+                    </ng-container>
+
+                    <button class="project-shell__logout"
+                            type="button"
+                            [disabled]="isLoggingOut"
+                            [attr.aria-label]="isLoggingOut ? 'Выход...' : 'Выйти'"
+                            (click)="logout()">
+                        {{ isLoggingOut ? 'Выход...' : 'Выйти' }}
+                    </button>
+                </div>
+            </top-navbar>
+
+            <div id="content"
+                 (click)="closeMobileNavigation()">
+                <div class="project-shell__content-inner">
+                    <router-outlet></router-outlet>
+                </div>
+            </div>
+        </div>
+    </div>
+</ng-container>
+
+<svg-definitions></svg-definitions>
+
+<ng-template #projectStateTmpl>
+    <div class="project-shell-state"
+         *ngIf="!errorMessage; else projectErrorTmpl">
+        <div class="project-shell-card">
+            <div class="project-shell-card__spinner"></div>
+            <div class="project-shell-card__title">Открываю проект</div>
+            <p class="project-shell-card__description">
+                Загружаю shell проекта, участников и статусы перед открытием board.
+            </p>
+        </div>
+    </div>
+</ng-template>
+
+<ng-template #projectErrorTmpl>
+    <div class="project-shell-state">
+        <div class="project-shell-card project-shell-card--error">
+            <div class="project-shell-card__eyebrow">Состояние проекта</div>
+            <div class="project-shell-card__title">{{ errorMessage }}</div>
+            <p class="project-shell-card__description">
+                Проект не найден или у текущего пользователя нет доступа.
+            </p>
+
+            <div class="project-shell-card__actions">
+                <button class="project-shell-card__action"
+                        type="button"
+                        (click)="retryLoadProject()">
+                    Повторить
+                </button>
+
+                <a class="project-shell-card__action project-shell-card__action--ghost"
+                   routerLink="/projects">
+                    К списку проектов
+                </a>
+            </div>
+        </div>
+    </div>
+</ng-template>

@@ -1,0 +1,22 @@
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.45rem;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  color: #626f8a;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.status-badge--success {
+  background: rgba(108, 76, 241, 0.15);
+  color: #4c3db3;
+}
+
+.status-badge--warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}

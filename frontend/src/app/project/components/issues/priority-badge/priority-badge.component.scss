@@ -1,0 +1,15 @@
+.priority-badge {
+  --priority-color: #6b7280;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.45rem;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  color: var(--priority-color);
+  background: color-mix(in srgb, var(--priority-color) 14%, white);
+  border: 1px solid color-mix(in srgb, var(--priority-color) 35%, white);
+  font-size: 0.7rem;
+  font-weight: 700;
+}

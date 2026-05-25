@@ -1,0 +1,198 @@
+<div *ngIf="issue; else loaderTmpl"
+     class="w-full h-full" [class.pl-4]="isShowCloseButton">
+    <div class="flex items-center pt-4 text-textDarkest">
+        <issue-type [issue]="issue"></issue-type>
+        <div class="flex-auto"></div>
+        <j-button *ngIf="isShowCloseButton"
+                  icon="expand"
+                  (click)="openIssuePage()"
+                  [iconSize]="24"
+                  [className]="'btn-empty'">
+        </j-button>
+        <j-button *ngIf="isShowCloseButton"
+                  icon="times"
+                  [iconSize]="24"
+                  (click)="closeModal()"
+                  [className]="'btn-empty'">
+        </j-button>
+    </div>
+    <div class="flex w-full flex-wrap pb-16">
+        <div class="sm:w-full md:w-7/12 lg:w-4/6 pr-10">
+            <issue-title [issue]="issue"></issue-title>
+
+            <div class="pt-4 pb-2 text-15 font-medium">Описание</div>
+            <issue-description [issue]="issue"></issue-description>
+
+            <div class="pt-4 pb-2 text-15 font-medium">Вложения</div>
+            <div class="issue-attachments">
+                <div class="issue-attachments__actions">
+                    <j-button className="btn-primary"
+                              [isWorking]="isUploadingAttachments"
+                              [disabled]="isLoadingAttachments || isUploadingAttachments"
+                              (click)="triggerAttachmentPicker()">
+                        {{ isUploadingAttachments ? 'Загрузка...' : 'Добавить файлы' }}
+                    </j-button>
+                    <input #attachmentInput
+                           class="issue-attachments__input"
+                           type="file"
+                           multiple
+                           (change)="onAttachmentSelected($event)" />
+                </div>
+
+                <div *ngIf="isLoadingAttachments"
+                     class="issue-attachments__hint">
+                    Загрузка вложений...
+                </div>
+
+                <div *ngIf="!isLoadingAttachments && !attachments.length"
+                     class="issue-attachments__hint">
+                    Пока нет вложений
+                </div>
+
+                <ul *ngIf="attachments.length"
+                    class="issue-attachments__list">
+                    <li *ngFor="let attachment of attachments; trackBy: trackAttachment"
+                        class="issue-attachments__item">
+                        <div class="issue-attachments__meta">
+                            <div class="issue-attachments__name"
+                                 [title]="attachment.fileName">
+                                {{ attachment.fileName }}
+                            </div>
+                            <div class="issue-attachments__details">
+                                {{ formatAttachmentSize(attachment.sizeBytes) }} ·
+                                {{ attachment.createdAt | date:"dd.MM.yyyy HH:mm" }}
+                            </div>
+                        </div>
+                        <div class="issue-attachments__buttons">
+                            <j-button [className]="'btn-empty'"
+                                      [disabled]="deletingAttachmentIds.has(attachment.id) || downloadingAttachmentIds.has(attachment.id)"
+                                      [isWorking]="downloadingAttachmentIds.has(attachment.id)"
+                                      (click)="downloadAttachment(attachment)">
+                                Скачать
+                            </j-button>
+                            <j-button [className]="'btn-empty'"
+                                      [disabled]="deletingAttachmentIds.has(attachment.id)"
+                                      [isWorking]="deletingAttachmentIds.has(attachment.id)"
+                                      (click)="deleteAttachment(attachment)">
+                                Удалить
+                            </j-button>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="pt-4 pb-2 text-15 font-medium">Комментарии</div>
+            <issue-comments [issue]="issue"></issue-comments>
+        </div>
+        <div class="sm:w-full md:w-5/12 lg:w-2/6 pt-1">
+            <div class="issue-detail-meta-card">
+                <div class="issue-detail-meta-card__header">
+                    <span *ngIf="issue.criticalityName"
+                          class="issue-detail-chip"
+                          [style.--issue-detail-chip-color]="criticalityColor">
+                        {{ issue.criticalityName }}
+                    </span>
+                    <span *ngIf="!issue.criticalityName"
+                          class="text-13 text-textMedium">
+                        Без критичности
+                    </span>
+                </div>
+                <div class="issue-detail-meta-card__dates">
+                    <div *ngIf="issue.dueDate"
+                         [class.text-red-600]="isOverdue">
+                        Дедлайн: {{ issue.dueDate | date:"dd.MM.yyyy" }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-5">
+                <div class="mb-2 uppercase text-textMedium text-13 font-bold">
+                    Критичность
+                </div>
+                <project-inline-select class="w-full"
+                                       [ngModel]="selectedCriticalityId"
+                                       (ngModelChange)="updateCriticality($event)"
+                                       [items]="projectQuery.criticalities$ | async"
+                                       valueKey="id"
+                                       labelKey="name"
+                                       [allowClear]="true"
+                                       placeholder="Без критичности">
+                </project-inline-select>
+            </div>
+
+            <div class="mt-5">
+                <div class="mb-2 uppercase text-textMedium text-13 font-bold">
+                    Трудозатраты
+                </div>
+                <div class="issue-effort-grid">
+                    <div class="issue-effort-card">
+                        <div class="issue-effort-card__label">Факт</div>
+                        <div class="issue-effort-card__value">
+                            {{ formatHours(issue.timeSpent, '0 ч') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-5">
+                <div class="mb-2 uppercase text-textMedium text-13 font-bold">
+                    Даты
+                </div>
+                <div class="grid gap-3">
+                    <div>
+                        <div class="mb-1 text-xs text-textMedium">
+                            Дата начала
+                        </div>
+                        <project-date-input [ngModel]="startDateValue"
+                                            (ngModelChange)="updateStartDate($event)"
+                                            [max]="dueDateValue || null"
+                                            label="Дата начала"
+                                            size="large">
+                        </project-date-input>
+                    </div>
+                    <div>
+                        <div class="mb-1 text-xs text-textMedium">
+                            Дедлайн
+                        </div>
+                        <project-date-input [ngModel]="dueDateValue"
+                                            (ngModelChange)="updateDueDate($event)"
+                                            [min]="startDateValue || null"
+                                            label="Дедлайн"
+                                            size="large">
+                        </project-date-input>
+                    </div>
+                </div>
+            </div>
+
+            <issue-status [issue]="issue"></issue-status>
+            <issue-reporter [issue]="issue"
+                            [users]="projectQuery.users$ | async">
+            </issue-reporter>
+            <issue-assignees [issue]="issue"
+                             [users]="projectQuery.users$ | async">
+            </issue-assignees>
+
+            <div class="mt-3 pt-3 leading-loose border-t border-borderLightest text-textMedium text-13">
+                <div>
+                    Создано: {{ issue.createdAt | date:"medium" }}
+                </div>
+                <div>
+                    Обновлено: {{ issue.updatedAt | date:"medium" }}
+                </div>
+            </div>
+
+            <div *ngIf="canDeleteIssue"
+                 class="mt-5 pt-4 border-t border-borderLightest">
+                <button class="issue-detail-danger-button"
+                        type="button"
+                        (click)="openDeleteIssueModal()">
+                    Удалить задачу
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<ng-template #loaderTmpl>
+    <issue-loader></issue-loader>
+</ng-template>

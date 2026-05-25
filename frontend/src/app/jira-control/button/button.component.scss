@@ -1,0 +1,118 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.55rem;
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xl);
+  background: transparent;
+  color: var(--color-text-default);
+  font-size: var(--font-size-body);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    transform var(--transition-base),
+    border-color var(--transition-base),
+    background-color var(--transition-base),
+    box-shadow var(--transition-base),
+    color var(--transition-base),
+    opacity var(--transition-base);
+  appearance: none;
+  cursor: pointer;
+  user-select: none;
+
+  &:disabled {
+    opacity: 0.58;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  &:focus-visible {
+    box-shadow: var(--focus-ring);
+  }
+
+  &.icon-only {
+    min-width: 2.55rem;
+    padding: 0;
+  }
+
+  &.no-padding-left {
+    padding-left: 0;
+  }
+
+  &.no-padding-right {
+    padding-right: 0;
+  }
+}
+
+.btn-primary,
+.btn-success {
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
+  box-shadow: 0 14px 28px rgba(108, 76, 241, 0.28);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 20px 32px rgba(108, 76, 241, 0.34);
+  }
+}
+
+.btn-secondary {
+  color: var(--color-text-default);
+  border-color: var(--color-border-soft);
+  background: rgba(255, 255, 255, 0.9);
+
+  &:hover:not(:disabled) {
+    background: rgba(108, 76, 241, 0.12);
+    color: #4834ac;
+  }
+}
+
+.btn-empty {
+  color: var(--color-text-default);
+  border-color: var(--color-border-soft);
+  background: transparent;
+
+  &:hover:not(:disabled),
+  &.is-active {
+    background: rgba(108, 76, 241, 0.12);
+    color: #4834ac;
+  }
+}
+
+.btn-outline {
+  color: #4834ac;
+  border-color: rgba(108, 76, 241, 0.22);
+  background: rgba(108, 76, 241, 0.06);
+
+  &:hover:not(:disabled) {
+    background: rgba(108, 76, 241, 0.14);
+  }
+}
+
+.btn-destructive {
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.24);
+  background: rgba(239, 68, 68, 0.1);
+
+  &:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.16);
+  }
+}
+
+.with-padding {
+  padding-left: 0.35rem;
+}
+
+.spinner {
+  animation: btn-spin 0.9s linear infinite;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

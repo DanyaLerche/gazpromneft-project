@@ -1,0 +1,26 @@
+<project-inline-select class="w-full"
+                       [formControl]="control"
+                       [items]="issueTypes"
+                       valueKey="value"
+                       labelKey="value"
+                       [selectedTemplate]="defaultTemplate"
+                       [optionTemplate]="optionTemplate">
+</project-inline-select>
+<ng-template #optionTemplate
+             let-type>
+    <div class="flex items-center">
+        <svg-icon [name]="type.icon"
+                  [size]="20">
+        </svg-icon>
+        <span class="ml-3 font-semibold uppercase text-textMedium text-13">{{ type.value }}</span>
+    </div>
+</ng-template>
+<ng-template #defaultTemplate
+             let-selected>
+    <div class="flex items-center">
+        <svg-icon [name]="getIssueTypeIcon(selected?.value)"
+                  [size]="20">
+        </svg-icon>
+        <span class="ml-3 font-semibold uppercase text-textMedium text-13">{{ selected?.value }}</span>
+    </div>
+</ng-template>

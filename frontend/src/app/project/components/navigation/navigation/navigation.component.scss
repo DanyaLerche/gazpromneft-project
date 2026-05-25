@@ -1,0 +1,12 @@
+.navigation {
+  position: relative;
+  flex-shrink: 0;
+  height: 100%;
+  z-index: 20;
+}
+
+@media (max-width: 767px) {
+  .navigation {
+    position: static;
+  }
+}

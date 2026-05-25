@@ -1,0 +1,17 @@
+.add-more {
+  font-size: 12.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: #6c4cf1;
+
+  &:hover,
+  &:visited,
+  &:active {
+    color: #6c4cf1;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

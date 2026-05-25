@@ -1,0 +1,272 @@
+:host {
+  display: block;
+  position: relative;
+}
+
+.project-date-input {
+  position: relative;
+}
+
+.project-date-input__control {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.5rem;
+  padding: 0.325rem 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  background: #fff;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+  cursor: text;
+}
+
+.project-date-input--large .project-date-input__control {
+  min-height: 2.75rem;
+}
+
+.project-date-input__control:hover {
+  background: #e9e3d7;
+}
+
+.project-date-input--open .project-date-input__control {
+  background: #fff;
+  border-color: rgba(108, 76, 241, 0.4);
+  box-shadow: 0 0 0 1px rgba(108, 76, 241, 0.4);
+}
+
+.project-date-input--disabled .project-date-input__control {
+  background: #f6f7fb;
+  cursor: not-allowed;
+}
+
+.project-date-input__field {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: #24372d;
+  font-size: 15px;
+  font-weight: 400;
+  font-family: inherit;
+  letter-spacing: normal;
+  line-height: 1.4;
+}
+
+.project-date-input--large .project-date-input__field {
+  font-size: 15px;
+}
+
+.project-date-input__field:focus {
+  outline: none;
+}
+
+.project-date-input__field::placeholder {
+  color: #97a099;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.project-date-input__clear,
+.project-date-input__toggle,
+.project-date-input__nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.project-date-input__clear,
+.project-date-input__toggle {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 3px;
+  background: transparent;
+  color: #69786f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.project-date-input__clear:hover,
+.project-date-input__toggle:hover,
+.project-date-input__nav:hover {
+  background: rgba(9, 30, 66, 0.06);
+  color: #24372d;
+}
+
+.project-date-input__toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.project-date-input__toggle-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  position: relative;
+}
+
+.project-date-input__toggle-icon::before,
+.project-date-input__toggle-icon::after {
+  position: absolute;
+  content: '';
+  background: currentColor;
+}
+
+.project-date-input__toggle-icon::before {
+  top: 0.18rem;
+  left: 0.12rem;
+  right: 0.12rem;
+  height: 2px;
+}
+
+.project-date-input__toggle-icon::after {
+  top: -0.26rem;
+  left: 0.18rem;
+  width: 0.18rem;
+  height: 0.34rem;
+  box-shadow: 0.42rem 0 0 currentColor;
+}
+
+.project-date-input__panel {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  left: 0;
+  z-index: 40;
+  width: 21rem;
+  max-width: min(21rem, calc(100vw - 2rem));
+  padding: 0.75rem;
+  border: 1px solid #d8d1c2;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: rgba(9, 30, 66, 0.25) 0 8px 16px -4px;
+}
+
+.project-date-input__header {
+  display: grid;
+  grid-template-columns: 2.25rem 1fr 2.25rem;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.55rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid #e9e3d7;
+}
+
+.project-date-input__month {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  color: #24372d;
+  font-family: inherit;
+}
+
+.project-date-input__nav {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 3px;
+  background: #f6f7fb;
+  color: #46584d;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.project-date-input__nav:hover {
+  background: rgba(108, 76, 241, 0.12);
+  color: #6c4cf1;
+}
+
+.project-date-input__weekdays,
+.project-date-input__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.project-date-input__weekdays {
+  margin-bottom: 0.3rem;
+}
+
+.project-date-input__weekdays span {
+  padding-bottom: 0.35rem;
+  color: #74827a;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-align: center;
+  text-transform: none;
+}
+
+.project-date-input__grid {
+  gap: 0.2rem;
+}
+
+.project-date-input__day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  min-height: 2.35rem;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #24372d;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.project-date-input__day:hover:not(.project-date-input__day--disabled) {
+  background: rgba(108, 76, 241, 0.12);
+  color: #4c3db3;
+}
+
+.project-date-input__day--outside {
+  color: #a5adba;
+}
+
+.project-date-input__day--today:not(.project-date-input__day--selected) {
+  background: rgba(108, 76, 241, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(108, 76, 241, 0.4);
+}
+
+.project-date-input__day--selected {
+  background: #4c3db3;
+  color: #fff;
+  box-shadow: none;
+}
+
+.project-date-input__day--disabled {
+  background: transparent;
+  color: #c9c0b1;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@media (max-width: 767px) {
+  .project-date-input__panel {
+    width: min(100vw - 2rem, 20rem);
+  }
+
+  .project-date-input__month {
+    font-size: 15px;
+  }
+
+  .project-date-input__day {
+    min-height: 2.2rem;
+    font-size: 14px;
+  }
+}

@@ -1,0 +1,54 @@
+<div class="issue-wrap">
+    <article (click)="openIssueModal(issue.id)"
+             (keydown.enter)="openIssueModal(issue.id)"
+             (keydown.space)="$event.preventDefault(); openIssueModal(issue.id)"
+             class="issue premium-card"
+             tabindex="0"
+             role="button"
+             [class.issue--overdue]="isOverdue"
+             [attr.aria-label]="'Открыть задачу ' + issue.key">
+        <header class="issue__header">
+            <div class="issue__type">
+                <svg-icon [name]="issueTypeIcon"
+                          [size]="15">
+                </svg-icon>
+                <span>{{ issue.type }}</span>
+            </div>
+            <span class="issue__key">{{ issue.key }}</span>
+        </header>
+
+        <h4 class="issue__title">{{ issue.title }}</h4>
+        <p class="issue__description">{{ descriptionPreview }}</p>
+
+        <div class="issue__meta">
+            <priority-badge [priority]="issue.priority"></priority-badge>
+            <status-badge [status]="statusLabel"></status-badge>
+        </div>
+
+        <div class="issue__footer">
+            <div class="issue__footer-row">
+                <user-avatar-group [users]="assignees"></user-avatar-group>
+                <span class="issue__metric">
+                    <svg-icon name="feedback"
+                              [size]="14">
+                    </svg-icon>
+                    {{ commentsCount }}
+                </span>
+            </div>
+
+            <div class="issue__footer-row">
+                <div *ngIf="hasPlannedEffort"
+                     class="issue__progress">
+                    <span class="issue__progress-bar"
+                          [style.width.%]="progressPercent"></span>
+                </div>
+
+                <span *ngIf="issue.dueDate"
+                      class="issue__due"
+                      [class.issue__due--overdue]="isOverdue">
+                    {{ issue.dueDate | date:"dd MMM" }}
+                </span>
+            </div>
+        </div>
+    </article>
+</div>

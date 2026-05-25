@@ -1,0 +1,3878 @@
+openapi: 3.0.3
+info:
+  title: Task Tracker API
+  version: "0.1.0"
+  description: |
+    Контракты Backend/Frontend для таск-трекера.
+    Документ ориентирован на использование в Swagger UI / Redoc и генерацию SDK.
+
+    Базовый префикс всех эндпоинтов: /api/v1
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Основной сервер API
+
+tags:
+  - name: ForMe
+    description: Главная страница пользователя (For Me)                                                                                                                                                                                                       
+  - name: Auth
+    description: Аутентификация и сессия пользователя
+  - name: Users
+    description: Поиск/получение пользователей (для добавления в проекты)
+  - name: Projects
+    description: Проекты и участники проектов
+  - name: Statuses
+    description: Проектные статусы (колонки канбана)
+  - name: Criticalities
+    description: Справочник критичности задач
+  - name: Issues
+    description: Эпики и задачи (CRUD, фильтры, детальная карточка)
+  - name: Links
+    description: Произвольные связи между задачами (blocks/relates и т.п.)
+  - name: Watchers
+    description: Наблюдатели задач
+  - name: Comments
+    description: Комментарии к задачам
+  - name: Attachments
+    description: Вложения (presigned upload)
+  - name: Wiki
+    description: Документация проекта (Confluence-like страницы, версии и вложения)
+  - name: Worklogs
+    description: Списание часов (учёт трудозатрат по дням)
+  - name: Schedules
+    description: Управление плановым графиком работы пользователей (расписание, календарь)
+  - name: Notifications
+    description: Уведомления (in-app + настройки)
+  - name: Reports
+    description: Агрегированные отчёты (plan/fact, трудозатраты, счётчики задач)
+  - name: Dashboards
+    description: Дашборды и виджеты (настраиваемые отчётные экраны)
+
+security:
+  - bearerAuth: []
+
+paths:
+  /for-me:
+    get:
+      summary: Главная страница пользователя (For Me)
+      description: |
+        Возвращает агрегированные данные для страницы "Мои задачи".
+        Включает:
+        - список задач пользователя
+        - список доступных проектов
+        - метаинформацию для фильтров (справочники статусов и пользователей)
+        Задачи включают:
+        - задачи где пользователь исполнитель
+        - задачи где пользователь автор
+        - задачи где пользователь наблюдатель
+      tags:
+        - ForMe
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: |
+            Поиск задач по:
+            - ключу задачи (PAY-123)
+            - названию задачи
+        - name: project_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Фильтр по проекту
+        - name: status_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Фильтр по статусу
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - created_at
+              - updated_at
+              - due_date
+          description: Поле сортировки
+        - name: last_seen_timestamp
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: |
+            Временная отметка последнего просмотра /for-me.
+            Используется для формирования мини-дайджеста изменений.
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Данные страницы For Me (агрегированный дашборд пользователя)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [issues, projects, total, filters, mini_digest, action_history]
+                properties:
+                  issues:
+                    type: array
+                    description: |
+                      Список задач пользователя.
+                    items:
+                      $ref: '#/components/schemas/Issue'
+                  projects:
+                    type: array
+                    description: |
+                      Проекты доступные пользователю.
+                    items:
+                      $ref: '#/components/schemas/Project'
+                  total:
+                    type: integer
+                    description: |
+                      Общее количество задач
+                      для пагинации.
+                  filters:
+                    type: object
+                    required: [statuses, users]
+                    properties:
+                      statuses:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Status'
+                      users:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+                  mini_digest:
+                    type: object
+                    required: [last_seen_timestamp, generated_at, items]
+                    properties:
+                      last_seen_timestamp:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      generated_at:
+                        type: string
+                        format: date-time
+                      items:
+                        type: array
+                        maxItems: 5
+                        items:
+                          type: object
+                          required:
+                            - item_type
+                            - issue_id
+                            - issue_key
+                            - issue_title
+                            - project_id
+                            - occurred_at
+                            - summary
+                          properties:
+                            item_type:
+                              type: string
+                              enum: [issue_updated, new_comment]
+                            issue_id:
+                              $ref: "#/components/schemas/UUID"
+                            issue_key:
+                              type: string
+                            issue_title:
+                              type: string
+                            project_id:
+                              $ref: "#/components/schemas/UUID"
+                            occurred_at:
+                              type: string
+                              format: date-time
+                            summary:
+                              type: string
+                  action_history:
+                    type: object
+                    required: [items]
+                    properties:
+                      items:
+                        type: array
+                        maxItems: 5
+                        items:
+                          type: object
+                          required:
+                            - action_type
+                            - issue_id
+                            - issue_key
+                            - issue_title
+                            - project_id
+                            - occurred_at
+                            - summary
+                          properties:
+                            action_type:
+                              type: string
+                              enum: [issue_created, comment_added, worklog_added]
+                            issue_id:
+                              $ref: "#/components/schemas/UUID"
+                            issue_key:
+                              type: string
+                            issue_title:
+                              type: string
+                            project_id:
+                              $ref: "#/components/schemas/UUID"
+                            occurred_at:
+                              type: string
+                              format: date-time
+                            summary:
+                              type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [Auth]
+      security: []
+      summary: Вход (получение JWT-токенов)
+      description: |
+        Аутентификация пользователя по email/паролю (или прокси к SSO — зависит от реализации).
+        Возвращает access_token (для Authorization Bearer) и refresh_token (для продления сессии).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Токены + профиль пользователя
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [Auth]
+      security: []
+      summary: Регистрация пользователя
+      description: |
+        Создает нового пользователя в системе.
+        Используется при первом входе в систему.
+        После регистрации пользователь может выполнить login.
+
+        В MVP регистрация может быть открытой.
+        В production возможно ограничение (например, только по корпоративной почте).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Пользователь успешно зарегистрирован
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: Пользователь с таким email уже существует
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [Auth]
+      security: []
+      summary: Обновление access_token по refresh_token
+      description: |
+        Используется, когда access_token истёк.
+        Refresh-токен должен быть действующим (не отозван и не истёк).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: Новый access_token (+ возможно новый refresh_token)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [Auth]
+      summary: Выход (инвалидация refresh_token)
+      description: |
+        Делает refresh_token недействительным. Access_token обычно живёт до истечения TTL.
+      responses:
+        "204":
+          description: Успешный выход
+
+  /me:
+    get:
+      operationId: getMe
+      tags: [Auth]
+      summary: Текущий пользователь
+      description: |
+        Возвращает профиль пользователя по access_token.
+        Полезно для инициализации фронтенда после перезагрузки страницы.
+      responses:
+        "200":
+          description: Профиль пользователя
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users:
+    get:
+      operationId: searchUsers
+      tags: [Users]
+      summary: Поиск пользователей
+      description: |
+        Используется в UI при добавлении участников в проект.
+        Обычно ищем по email/ФИО.
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Список пользователей с пагинацией
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedUsers"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/{userId}:
+    get:
+      operationId: getUser
+      tags: [Users]
+      summary: Получить пользователя по ID
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Пользователь
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [Projects]
+      summary: Список проектов текущего пользователя
+      description: |
+        Возвращает проекты, где пользователь является участником (или создателем).
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Список проектов с пагинацией
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedProjects"
+    post:
+      operationId: createProject
+      tags: [Projects]
+      summary: Создать проект
+      description: |
+        Создаёт проект с уникальным key (например PAY).
+        Обычно доступно только пользователям с соответствующими правами (в MVP — любому авторизованному).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+      responses:
+        "201":
+          description: Проект создан
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [project]
+                properties:
+                  project:
+                    $ref: "#/components/schemas/Project"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /projects/{projectId}:
+    get:
+      operationId: getProject
+      tags: [Projects]
+      summary: Получить проект
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Проект
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [project]
+                properties:
+                  project:
+                    $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{projectId}/onboarding/recommendations:
+    get:
+      operationId: getOnboardingRecommendations
+      tags: [Projects]
+      summary: Получить onboarding-рекомендации по проекту
+      description: |
+        Возвращает рекомендации для onboarding на основе проектных данных:
+        - reads (Wiki pages)
+        - issues_to_review (Issues)
+        - key_people (Users)
+        Для каждого элемента возвращается reason и опциональный score.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: force
+          in: query
+          required: false
+          description: Принудительно пересчитать рекомендации, игнорируя кэш.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Onboarding-рекомендации
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingRecommendationsResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{projectId}/me/preferences:
+    get:
+      operationId: getMyProjectPreferences
+      tags: [Projects]
+      summary: Получить персональные настройки проекта
+      description: |
+        Возвращает настройки текущего пользователя для конкретного проекта.
+        Сейчас используется для флага new_employee_mode.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Настройки текущего пользователя
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectOnboardingPreferencesResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateMyProjectPreferences
+      tags: [Projects]
+      summary: Обновить персональные настройки проекта
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectOnboardingPreferencesRequest"
+      responses:
+        "200":
+          description: Настройки обновлены
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectOnboardingPreferencesResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{projectId}/onboarding/assignees:
+    get:
+      operationId: getProjectOnboardingAssignees
+      tags: [Projects]
+      summary: Получить список назначенных onboarding-пользователей
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Пользователи, которым назначен onboarding-режим
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectOnboardingAssigneesResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateProjectOnboardingAssignees
+      tags: [Projects]
+      summary: Назначить onboarding-пользователей проекта
+      description: |
+        Обновляет полный список участников, которым показывается New Employee onboarding.
+        Требует роль admin_project.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectOnboardingAssigneesRequest"
+      responses:
+        "200":
+          description: Список назначений обновлен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectOnboardingAssigneesResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{projectId}/users:
+    get:
+      operationId: listProjectUsers
+      tags: [Projects]
+      summary: Список участников проекта
+      description: |
+        Возвращает участников и их роли. Используется в экране "Участники проекта".
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Участники проекта
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedProjectUsers"
+    post:
+      operationId: addProjectUser
+      tags: [Projects]
+      summary: Добавить пользователя в проект
+      description: |
+        Требует роль project_admin в данном проекте.
+        В MVP инвайт выполняется по user_id (без email-приглашений).
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddProjectUserRequest"
+      responses:
+        "201":
+          description: Пользователь добавлен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectUser"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /projects/{projectId}/users/{userId}:
+    delete:
+      operationId: removeProjectUser
+      tags: [Projects]
+      summary: Удалить пользователя из проекта
+      description: |
+        Требует роль project_admin.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: Пользователь удалён
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{projectId}/statuses:
+    get:
+      operationId: listStatuses
+      tags: [Statuses]
+      summary: Получить статусы проекта
+      description: |
+        Статусы — это "колонки" канбана (Todo / In progress / Done и т.п.).
+        Категория статуса (todo/in_progress/done) важна для бизнес-правил (например, resolved_at).
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Статусы
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Status"
+    post:
+      operationId: createStatus
+      tags: [Statuses]
+      summary: Создать статус
+      description: |
+        Требует project_admin.
+        sort_order позволяет управлять порядком колонок в UI.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStatusRequest"
+      responses:
+        "201":
+          description: Статус создан
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    $ref: "#/components/schemas/Status"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /statuses/{statusId}:
+    patch:
+      operationId: updateStatus
+      tags: [Statuses]
+      summary: Обновить статус
+      description: Требует project_admin.
+      parameters:
+        - $ref: "#/components/parameters/StatusId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStatusRequest"
+      responses:
+        "200":
+          description: Статус обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    $ref: "#/components/schemas/Status"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      operationId: deleteStatus
+      tags: [Statuses]
+      summary: Удалить статус
+      description: Требует project_admin.
+      parameters:
+        - $ref: "#/components/parameters/StatusId"
+      responses:
+        "204":
+          description: Статус удалён
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /criticalities:
+    get:
+      operationId: listCriticalities
+      tags: [Criticalities]
+      summary: Справочник критичности
+      description: |
+        Возвращает уровни критичности (например Low/Medium/High).
+        Используется в UI для сортировки/приоритезации задач.
+      responses:
+        "200":
+          description: Критичности
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Criticality"
+
+  /projects/{projectId}/issues:
+    get:
+      operationId: listIssues
+      tags: [Issues]
+      summary: Список задач/эпиков с фильтрами
+      description: |
+        Основной эндпоинт для доски/таблицы задач.
+        Поддерживает фильтры по статусу, исполнителю, автору, родителю, датам и поиску по ключу/заголовку.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: type
+          in: query
+          description: Тип сущности (epic или task). Если не передан — возвращаем оба.
+          schema:
+            $ref: "#/components/schemas/IssueType"
+        - name: status_id
+          in: query
+          description: Фильтр по статусу.
+          schema:
+            $ref: "#/components/schemas/UUID"
+        - name: assignee_id
+          in: query
+          description: Фильтр по исполнителю.
+          schema:
+            $ref: "#/components/schemas/UUID"
+        - name: author_id
+          in: query
+          description: Фильтр по автору.
+          schema:
+            $ref: "#/components/schemas/UUID"
+        - name: parent_id
+          in: query
+          description: Фильтр по родительской задаче (иерархия).
+          schema:
+            $ref: "#/components/schemas/UUID"
+        - name: created_from
+          in: query
+          description: Нижняя граница даты создания (включительно).
+          schema:
+            $ref: "#/components/schemas/DateTime"
+        - name: created_to
+          in: query
+          description: "Верхняя граница даты создания (см. реализацию: включительно/исключительно)."
+          schema:
+            $ref: "#/components/schemas/DateTime"
+        - name: taken_in_work_from
+          in: query
+          description: Фильтр по дате взятия в работу.
+          schema:
+            $ref: "#/components/schemas/DateTime"
+        - name: taken_in_work_to
+          in: query
+          description: Фильтр по дате взятия в работу.
+          schema:
+            $ref: "#/components/schemas/DateTime"
+        - name: resolved_from
+          in: query
+          description: Фильтр по дате завершения.
+          schema:
+            $ref: "#/components/schemas/DateTime"
+        - name: resolved_to
+          in: query
+          description: Фильтр по дате завершения.
+          schema:
+            $ref: "#/components/schemas/DateTime"
+        - $ref: "#/components/parameters/Q"
+        - name: sort
+          in: query
+          description: Поле сортировки списка.
+          schema:
+            type: string
+            enum: [created_at, taken_in_work_at, resolved_at, due_date]
+        - name: order
+          in: query
+          description: Направление сортировки.
+          schema:
+            type: string
+            enum: [asc, desc]
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Список задач
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedIssues"
+    post:
+      operationId: createIssue
+      tags: [Issues]
+      summary: Создать задачу/эпик
+      description: |
+        Создаёт сущность (epic/task). Поле key генерируется бэкендом (например PAY-123).
+        Для задач onboarding и сигналов используйте единый источник правил:
+        `backend/docs/onboarding_signals.md`.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIssueRequest"
+            examples:
+              newEmployeeOnboardingMvpEpic:
+                summary: Epic для MVP режима «Новый сотрудник»
+                description: |
+                  Epic фиксирует MVP-скоуп авто-onboarding:
+                  - рекомендации по Wiki;
+                  - рекомендации по Issues;
+                  - рекомендации по ключевым людям (Users);
+                  с объяснением «почему это важно» для каждого блока.
+                value:
+                  type: epic
+                  title: Режим «Новый сотрудник» авто-onboarding (MVP)
+                  description: Система автоматически рекомендует что читать (Wiki), какие задачи посмотреть (Issues), кто ключевые люди (Users). Только на основе данных проекта (активность, связи, роли), без вручную написанных гайдов.
+                  status_id: "00000000-0000-0000-0000-000000000001"
+              designOnboardingSignalsTask:
+                summary: Task на проектирование сигналов onboarding (под эпиком)
+                description: |
+                  Создание task в эпике onboarding c parent_id=<EPIC_ID>.
+                  Формулы/эвристики и формат ответа API описаны в:
+                  `backend/docs/onboarding_signals.md`.
+                value:
+                  type: task
+                  title: Спроектировать сигналы из реальных данных (что считаем важным)
+                  description: Зафиксировать таблицы/факты, формулы важности и explainability (reason + score). См. backend/docs/onboarding_signals.md
+                  status_id: "00000000-0000-0000-0000-000000000001"
+                  parent_id: "00000000-0000-0000-0000-000000000099"
+      responses:
+        "201":
+          description: Создано
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [issue]
+                properties:
+                  issue:
+                    $ref: "#/components/schemas/Issue"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /projects/{projectId}/issues/by-key/{issueKey}:
+    get:
+      operationId: getIssueByKey
+      tags: [Issues]
+      summary: Получить задачу по ключу (например PAY-123)
+      description: Удобно для быстрого поиска в UI по ключу задачи.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/IssueKey"
+      responses:
+        "200":
+          description: Задача
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [issue]
+                properties:
+                  issue:
+                    $ref: "#/components/schemas/Issue"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /issues/{issueId}:
+    get:
+      operationId: getIssue
+      tags: [Issues]
+      summary: Детальная карточка задачи
+      description: |
+        Возвращает задачу + связанные данные:
+        - watchers (наблюдатели)
+        - comments (комментарии)
+        - attachments (вложения)
+        - worklog_summary (план/факт по часам для карточки)
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+      responses:
+        "200":
+          description: Детали
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueDetailsResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateIssue
+      tags: [Issues]
+      summary: Обновить задачу (частично)
+      description: |
+        PATCH позволяет передавать только изменяемые поля.
+        Бизнес-правила могут автоматически выставлять resolved_at при переводе в done.
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIssueRequest"
+      responses:
+        "200":
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [issue]
+                properties:
+                  issue:
+                    $ref: "#/components/schemas/Issue"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /issues/{issueId}/links:
+    get:
+      operationId: listIssueLinks
+      tags: [Links]
+      summary: Список связей задачи
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+      responses:
+        "200":
+          description: Связи
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/IssueLink"
+    post:
+      operationId: createIssueLink
+      tags: [Links]
+      summary: Создать связь
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIssueLinkRequest"
+      responses:
+        "201":
+          description: Связь создана
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [link]
+                properties:
+                  link:
+                    $ref: "#/components/schemas/IssueLink"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /links/{linkId}:
+    delete:
+      operationId: deleteIssueLink
+      tags: [Links]
+      summary: Удалить связь
+      parameters:
+        - $ref: "#/components/parameters/LinkId"
+      responses:
+        "204":
+          description: Удалено
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /issues/{issueId}/watchers:
+    get:
+      operationId: listWatchers
+      tags: [Watchers]
+      summary: Список наблюдателей
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+      responses:
+        "200":
+          description: Наблюдатели
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserLite"
+    post:
+      operationId: addWatcher
+      tags: [Watchers]
+      summary: Добавить наблюдателя
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddWatcherRequest"
+      responses:
+        "201":
+          description: Добавлено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueWatcher"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /issues/{issueId}/watchers/{userId}:
+    delete:
+      operationId: removeWatcher
+      tags: [Watchers]
+      summary: Удалить наблюдателя
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: Удалено
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /issues/{issueId}/comments:
+    get:
+      operationId: listComments
+      tags: [Comments]
+      summary: Список комментариев
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Комментарии
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedComments"
+    post:
+      operationId: createComment
+      tags: [Comments]
+      summary: Добавить комментарий
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentRequest"
+      responses:
+        "201":
+          description: Комментарий создан
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [comment]
+                properties:
+                  comment:
+                    $ref: "#/components/schemas/IssueComment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /comments/{commentId}:
+    patch:
+      operationId: updateComment
+      tags: [Comments]
+      summary: Редактировать комментарий
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCommentRequest"
+      responses:
+        "200":
+          description: Комментарий обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [comment]
+                properties:
+                  comment:
+                    $ref: "#/components/schemas/IssueComment"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteComment
+      tags: [Comments]
+      summary: Удалить комментарий
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        "204":
+          description: Удалено
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /issues/{issueId}/attachments/prepare:
+    post:
+      operationId: prepareAttachment
+      tags: [Attachments]
+      summary: Подготовить загрузку вложения (presigned upload)
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrepareAttachmentRequest"
+      responses:
+        "200":
+          description: Данные для загрузки
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrepareAttachmentResponse"
+
+  /issues/{issueId}/attachments:
+    get:
+      operationId: listAttachments
+      tags: [Attachments]
+      summary: Список вложений задачи
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+      responses:
+        "200":
+          description: Вложения
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/IssueAttachment"
+    post:
+      operationId: createAttachment
+      tags: [Attachments]
+      summary: Подтвердить вложение после загрузки
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAttachmentRequest"
+      responses:
+        "201":
+          description: Вложение зафиксировано
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [attachment]
+                properties:
+                  attachment:
+                    $ref: "#/components/schemas/IssueAttachment"
+
+  /attachments/{attachmentId}/download:
+    get:
+      operationId: getAttachmentDownloadUrl
+      tags: [Attachments]
+      summary: Получить URL для скачивания
+      parameters:
+        - $ref: "#/components/parameters/AttachmentId"
+      responses:
+        "200":
+          description: URL для скачивания
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [download_url]
+                properties:
+                  download_url:
+                    type: string
+                    format: uri
+
+  /attachments/{attachmentId}:
+    delete:
+      operationId: deleteAttachment
+      tags: [Attachments]
+      summary: Удалить вложение
+      parameters:
+        - $ref: "#/components/parameters/AttachmentId"
+      responses:
+        "204":
+          description: Удалено
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{projectId}/wiki/pages:
+    get:
+      operationId: listWikiPages
+      tags: [Wiki]
+      summary: Дерево страниц документации проекта
+      description: |
+        Возвращает иерархию страниц документации (parent/children) для проекта.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Дерево страниц
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/WikiPageTreeItem"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createWikiPage
+      tags: [Wiki]
+      summary: Создать страницу документации
+      description: |
+        Создаёт страницу документации в проекте.
+        Поддерживается иерархия через поле parent_id.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWikiPageRequest"
+      responses:
+        "201":
+          description: Страница создана
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [page]
+                properties:
+                  page:
+                    $ref: "#/components/schemas/WikiPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /projects/{projectId}/wiki/render:
+    post:
+      operationId: renderWikiContent
+      tags: [Wiki]
+      summary: Рендер markdown с Confluence-подобными макросами
+      description: |
+        Возвращает HTML-превью для markdown с поддержкой встроенных макросов:
+        {info}, {warning}, {code:lang}, {include:page-slug}.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenderWikiContentRequest"
+      responses:
+        "200":
+          description: HTML превью
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RenderWikiContentResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /projects/{projectId}/wiki/pages/{pageId}:
+    get:
+      operationId: getWikiPage
+      tags: [Wiki]
+      summary: Получить страницу документации
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/WikiPageId"
+      responses:
+        "200":
+          description: Страница документации
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [page]
+                properties:
+                  page:
+                    $ref: "#/components/schemas/WikiPage"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateWikiPage
+      tags: [Wiki]
+      summary: Обновить страницу документации
+      description: |
+        Сохраняет изменения страницы и создаёт новую ревизию.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/WikiPageId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWikiPageRequest"
+      responses:
+        "200":
+          description: Обновлённая страница
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [page]
+                properties:
+                  page:
+                    $ref: "#/components/schemas/WikiPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteWikiPage
+      tags: [Wiki]
+      summary: Удалить страницу документации
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/WikiPageId"
+      responses:
+        "204":
+          description: Удалено
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{projectId}/wiki/pages/{pageId}/revisions:
+    get:
+      operationId: listWikiPageRevisions
+      tags: [Wiki]
+      summary: История версий страницы
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/WikiPageId"
+      responses:
+        "200":
+          description: Список ревизий
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/WikiPageRevision"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{projectId}/wiki/pages/{pageId}/restore:
+    post:
+      operationId: restoreWikiPageRevision
+      tags: [Wiki]
+      summary: Откатить страницу к выбранной версии
+      description: |
+        Восстанавливает содержимое страницы из ревизии и формирует новую актуальную версию.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/WikiPageId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestoreWikiPageRequest"
+      responses:
+        "200":
+          description: Восстановленная страница
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [page]
+                properties:
+                  page:
+                    $ref: "#/components/schemas/WikiPage"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{projectId}/wiki/pages/{pageId}/attachments/prepare:
+    post:
+      operationId: prepareWikiAttachment
+      tags: [Wiki]
+      summary: Подготовить загрузку вложения страницы (presigned upload)
+      description: |
+        Предназначено для загрузки файлов любого объёма напрямую в S3/MinIO.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/WikiPageId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrepareWikiAttachmentRequest"
+      responses:
+        "200":
+          description: Данные для загрузки
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrepareWikiAttachmentResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{projectId}/wiki/pages/{pageId}/attachments:
+    get:
+      operationId: listWikiAttachments
+      tags: [Wiki]
+      summary: Список вложений страницы
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/WikiPageId"
+      responses:
+        "200":
+          description: Вложения страницы
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/WikiPageAttachment"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createWikiAttachment
+      tags: [Wiki]
+      summary: Подтвердить вложение страницы после загрузки
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/WikiPageId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWikiAttachmentRequest"
+      responses:
+        "201":
+          description: Вложение зафиксировано
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [attachment]
+                properties:
+                  attachment:
+                    $ref: "#/components/schemas/WikiPageAttachment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wiki/attachments/{attachmentId}/download:
+    get:
+      operationId: getWikiAttachmentDownloadUrl
+      tags: [Wiki]
+      summary: Получить URL для скачивания вложения страницы
+      parameters:
+        - $ref: "#/components/parameters/WikiAttachmentId"
+      responses:
+        "200":
+          description: URL для скачивания
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WikiAttachmentDownloadResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /wiki/attachments/{attachmentId}:
+    delete:
+      operationId: deleteWikiAttachment
+      tags: [Wiki]
+      summary: Удалить вложение страницы
+      parameters:
+        - $ref: "#/components/parameters/WikiAttachmentId"
+      responses:
+        "204":
+          description: Удалено
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /issues/{issueId}/worklogs:
+    get:
+      operationId: listWorklogs
+      tags: [Worklogs]
+      summary: Список списаний по задаче
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+        - name: from
+          in: query
+          description: Начальная дата периода (включительно).
+          schema:
+            $ref: "#/components/schemas/Date"
+        - name: to
+          in: query
+          description: Конечная дата периода (включительно).
+          schema:
+            $ref: "#/components/schemas/Date"
+      responses:
+        "200":
+          description: Worklogs + summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedWorklogsWithSummary"
+    post:
+      operationId: createWorklog
+      tags: [Worklogs]
+      summary: Добавить списание часов
+      parameters:
+        - $ref: "#/components/parameters/IssueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorklogRequest"
+      responses:
+        "201":
+          description: Списание создано
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [worklog]
+                properties:
+                  worklog:
+                    $ref: "#/components/schemas/Worklog"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /users/{userId}/worklogs:
+    get:
+      operationId: listUserWorklogs
+      tags: [Worklogs]
+      summary: Списания пользователя (для отчётов)
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - name: project_id
+          in: query
+          description: Если указан — фильтр по проекту.
+          schema:
+            $ref: "#/components/schemas/UUID"
+        - name: from
+          in: query
+          description: Начало периода.
+          schema:
+            $ref: "#/components/schemas/Date"
+        - name: to
+          in: query
+          description: Конец периода.
+          schema:
+            $ref: "#/components/schemas/Date"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Списания пользователя
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedWorklogs"
+
+  /worklogs/{worklogId}:
+    patch:
+      operationId: updateWorklog
+      tags: [Worklogs]
+      summary: Изменить списание
+      parameters:
+        - $ref: "#/components/parameters/WorklogId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWorklogRequest"
+      responses:
+        "200":
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [worklog]
+                properties:
+                  worklog:
+                    $ref: "#/components/schemas/Worklog"
+    delete:
+      operationId: deleteWorklog
+      tags: [Worklogs]
+      summary: Удалить списание
+      parameters:
+        - $ref: "#/components/parameters/WorklogId"
+      responses:
+        "204":
+          description: Удалено
+
+  /projects/{projectId}/notification-settings/me:
+    get:
+      operationId: getNotificationSettings
+      tags: [Notifications]
+      summary: Настройки уведомлений (текущий пользователь)
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Настройка
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [setting]
+                properties:
+                  setting:
+                    $ref: "#/components/schemas/NotificationSetting"
+    put:
+      operationId: updateNotificationSettings
+      tags: [Notifications]
+      summary: Обновить настройки уведомлений
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNotificationSettingRequest"
+      responses:
+        "200":
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [setting]
+                properties:
+                  setting:
+                    $ref: "#/components/schemas/NotificationSetting"
+
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [Notifications]
+      summary: Лента уведомлений (in-app)
+      parameters:
+        - name: is_read
+          in: query
+          description: Фильтр по прочитанности.
+          schema:
+            type: boolean
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Уведомления
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedUserNotificationsJoined"
+
+  /notifications/mark-read:
+    post:
+      operationId: markNotificationsRead
+      tags: [Notifications]
+      summary: Отметить уведомления как прочитанные
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkReadRequest"
+      responses:
+        "204":
+          description: Отмечено
+
+  /projects/{projectId}/reports/worklogs-by-user:
+    get:
+      operationId: getWorklogsByUserReport
+      tags: [Reports]
+      summary: Отчёт трудозатрат по пользователям
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: from
+          in: query
+          required: true
+          description: Начало периода.
+          schema:
+            $ref: "#/components/schemas/Date"
+        - name: to
+          in: query
+          required: true
+          description: Конец периода.
+          schema:
+            $ref: "#/components/schemas/Date"
+      responses:
+        "200":
+          description: Отчёт
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportWorklogsByUser"
+
+  /projects/{projectId}/reports/plan-fact:
+    get:
+      operationId: getPlanFactReport
+      tags: [Reports]
+      summary: Отчёт план/факт
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: from
+          in: query
+          description: Начало периода.
+          schema:
+            $ref: "#/components/schemas/Date"
+        - name: to
+          in: query
+          description: Конец периода.
+          schema:
+            $ref: "#/components/schemas/Date"
+      responses:
+        "200":
+          description: Отчёт
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportPlanFact"
+
+  /projects/{projectId}/reports/issues-count:
+    get:
+      operationId: getIssuesCountReport
+      tags: [Reports]
+      summary: Отчёт по количеству задач
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: from
+          in: query
+          description: Начало периода.
+          schema:
+            $ref: "#/components/schemas/Date"
+        - name: to
+          in: query
+          description: Конец периода.
+          schema:
+            $ref: "#/components/schemas/Date"
+        - name: group_by
+          in: query
+          description: Группировка — epic возвращает разбивку по эпикам, иначе агрегат по проекту.
+          schema:
+            type: string
+            enum: [epic]
+      responses:
+        "200":
+          description: Отчёт
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportIssuesCount"
+
+  /projects/{projectId}/dashboards:
+    get:
+      operationId: listDashboards
+      tags: [Dashboards]
+      summary: Список дашбордов проекта
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Дашборды
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedDashboards"
+    post:
+      operationId: createDashboard
+      tags: [Dashboards]
+      summary: Создать дашборд
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDashboardRequest"
+      responses:
+        "201":
+          description: Создано
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dashboard]
+                properties:
+                  dashboard:
+                    $ref: "#/components/schemas/Dashboard"
+
+  /dashboards/{dashboardId}:
+    get:
+      operationId: getDashboard
+      tags: [Dashboards]
+      summary: Получить дашборд (с виджетами)
+      parameters:
+        - $ref: "#/components/parameters/DashboardId"
+      responses:
+        "200":
+          description: Дашборд
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardDetailsResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateDashboard
+      tags: [Dashboards]
+      summary: Обновить дашборд
+      parameters:
+        - $ref: "#/components/parameters/DashboardId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDashboardRequest"
+      responses:
+        "200":
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dashboard]
+                properties:
+                  dashboard:
+                    $ref: "#/components/schemas/Dashboard"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteDashboard
+      tags: [Dashboards]
+      summary: Удалить дашборд
+      parameters:
+        - $ref: "#/components/parameters/DashboardId"
+      responses:
+        "204":
+          description: Удалено
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /dashboards/{dashboardId}/widgets:
+    get:
+      operationId: listDashboardWidgets
+      tags: [Dashboards]
+      summary: Список виджетов дашборда
+      parameters:
+        - $ref: "#/components/parameters/DashboardId"
+      responses:
+        "200":
+          description: Виджеты
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DashboardWidget"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createWidget
+      tags: [Dashboards]
+      summary: Добавить виджет на дашборд
+      parameters:
+        - $ref: "#/components/parameters/DashboardId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWidgetRequest"
+      responses:
+        "201":
+          description: Создано
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [widget]
+                properties:
+                  widget:
+                    $ref: "#/components/schemas/DashboardWidget"
+
+  /widgets/{widgetId}:
+    patch:
+      operationId: updateWidget
+      tags: [Dashboards]
+      summary: Обновить виджет
+      parameters:
+        - $ref: "#/components/parameters/WidgetId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWidgetRequest"
+      responses:
+        "200":
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [widget]
+                properties:
+                  widget:
+                    $ref: "#/components/schemas/DashboardWidget"
+    delete:
+      operationId: deleteWidget
+      tags: [Dashboards]
+      summary: Удалить виджет
+      parameters:
+        - $ref: "#/components/parameters/WidgetId"
+      responses:
+        "204":
+          description: Удалено
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{userId}/schedules:
+    get:
+      operationId: listUserSchedules
+      tags: [Schedules]
+      summary: Получить график работы пользователя за период
+      description: |
+        Возвращает записи планового графика для указанного пользователя.
+        - Обычный пользователь может запросить только свой график.
+        - Администратор проекта может запросить график участников своего проекта.
+        - Администратор приложения — любого пользователя.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/DateFrom"
+        - $ref: "#/components/parameters/DateTo"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Список записей графика
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedSchedules"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    post:
+      operationId: createSchedule
+      tags: [Schedules]
+      summary: Создать запись графика
+      description: |
+        Добавляет новую запись планового графика для пользователя.
+        Если запись на указанную дату уже существует, возвращает ошибку 409 Conflict.
+        Права: пользователь может создать запись для себя; администратор проекта — для участников своего проекта.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateScheduleRequest"
+      responses:
+        "201":
+          description: Запись создана
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [schedule]
+                properties:
+                  schedule:
+                    $ref: "#/components/schemas/Schedule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /schedules/{scheduleId}:
+    patch:
+      operationId: updateSchedule
+      tags: [Schedules]
+      summary: Обновить запись графика
+      description: |
+        Изменяет плановые часы и/или комментарий существующей записи.
+        Права: пользователь может редактировать только свои записи; администратор проекта — записи участников своего проекта.
+      parameters:
+        - $ref: "#/components/parameters/ScheduleId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateScheduleRequest"
+      responses:
+        "200":
+          description: Запись обновлена
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [schedule]
+                properties:
+                  schedule:
+                    $ref: "#/components/schemas/Schedule"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteSchedule
+      tags: [Schedules]
+      summary: Удалить запись графика
+      description: |
+        Удаляет запись планового графика.
+        Права: пользователь может удалить только свои записи; администратор проекта — записи участников своего проекта.
+      parameters:
+        - $ref: "#/components/parameters/ScheduleId"
+      responses:
+        "204":
+          description: Запись удалена
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  x-duplicate-project-schedules:
+    get:
+      operationId: listProjectSchedules
+      tags: [Schedules]
+      summary: Получить график работы участников проекта
+      description: |
+        Возвращает записи планового графика для всех участников указанного проекта.
+        Доступно только администратору проекта.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/DateFrom"
+        - $ref: "#/components/parameters/DateTo"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Список записей графика с информацией о пользователях
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedSchedulesWithUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{projectId}/schedules:
+    get:
+      operationId: listProjectSchedules
+      tags: [Schedules]
+      summary: Получить график работы участников проекта
+      description: |
+        Возвращает записи планового графика для всех участников указанного проекта.
+        Доступно только администратору проекта.
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/DateFrom"
+        - $ref: "#/components/parameters/DateTo"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Список записей графика с информацией о пользователях
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedSchedulesWithUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+          
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT access token в заголовке Authorization: Bearer <token>"
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: Максимум элементов на странице (пагинация).
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    Offset:
+      name: offset
+      in: query
+      description: Смещение от начала списка (пагинация).
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Q:
+      name: q
+      in: query
+      description: Поисковая строка (зависит от эндпоинта).
+      schema:
+        type: string
+        maxLength: 200
+    UserId:
+      name: userId
+      in: path
+      required: true
+      description: UUID пользователя.
+      schema:
+        $ref: "#/components/schemas/UUID"
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      description: UUID проекта.
+      schema:
+        $ref: "#/components/schemas/UUID"
+    IssueId:
+      name: issueId
+      in: path
+      required: true
+      description: UUID задачи/эпика.
+      schema:
+        $ref: "#/components/schemas/UUID"
+    WikiPageId:
+      name: pageId
+      in: path
+      required: true
+      description: UUID wiki-страницы.
+      schema:
+        $ref: "#/components/schemas/UUID"
+    StatusId:
+      name: statusId
+      in: path
+      required: true
+      description: UUID статуса.
+      schema:
+        $ref: "#/components/schemas/UUID"
+    IssueKey:
+      name: issueKey
+      in: path
+      required: true
+      description: Человекочитаемый ключ задачи (например PAY-123).
+      schema:
+        type: string
+        pattern: "^[A-Z]{2,10}-\\d+$"
+        example: PAY-123
+    LinkId:
+      name: linkId
+      in: path
+      required: true
+      description: UUID связи.
+      schema:
+        $ref: "#/components/schemas/UUID"
+    CommentId:
+      name: commentId
+      in: path
+      required: true
+      description: UUID комментария.
+      schema:
+        $ref: "#/components/schemas/UUID"
+    AttachmentId:
+      name: attachmentId
+      in: path
+      required: true
+      description: UUID вложения.
+      schema:
+        $ref: "#/components/schemas/UUID"
+    WikiAttachmentId:
+      name: attachmentId
+      in: path
+      required: true
+      description: UUID вложения wiki-страницы.
+      schema:
+        $ref: "#/components/schemas/UUID"
+    WorklogId:
+      name: worklogId
+      in: path
+      required: true
+      description: UUID списания.
+      schema:
+        $ref: "#/components/schemas/UUID"
+    DashboardId:
+      name: dashboardId
+      in: path
+      required: true
+      description: UUID дашборда.
+      schema:
+        $ref: "#/components/schemas/UUID"
+    WidgetId:
+      name: widgetId
+      in: path
+      required: true
+      description: UUID виджета.
+      schema:
+        $ref: "#/components/schemas/UUID"
+    ScheduleId:
+      name: scheduleId
+      in: path
+      required: true
+      description: UUID записи графика.
+      schema:
+        $ref: "#/components/schemas/UUID"
+    DateFrom:
+      name: from
+      in: query
+      description: Начало периода (включительно). Формат YYYY-MM-DD.
+      schema:
+        $ref: "#/components/schemas/Date"
+    DateTo:
+      name: to
+      in: query
+      description: Конец периода (включительно). Формат YYYY-MM-DD.
+      schema:
+        $ref: "#/components/schemas/Date"
+
+  responses:
+    BadRequest:
+      description: Ошибка запроса / ошибка валидации
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Не авторизован
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Нет прав
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Конфликт
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+      description: UUID v4.
+      example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    Date:
+      type: string
+      format: date
+      description: Дата (YYYY-MM-DD).
+      example: "2026-03-02"
+    DateTime:
+      type: string
+      format: date-time
+      description: ISO 8601 datetime (с таймзоной).
+      example: "2026-03-02T10:15:30Z"
+    Numeric:
+      type: number
+      format: double
+      description: Число (допускаются дробные значения).
+
+    ErrorDetail:
+      type: object
+      properties:
+        field:
+          type: string
+          description: Поле запроса.
+        reason:
+          type: string
+          description: Причина.
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Код ошибки.
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: Текст ошибки.
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetail"
+        request_id:
+          type: string
+          description: ID запроса.
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/Error"
+
+    RegisterRequest:
+      type: object
+      required: [email, full_name, password]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email пользователя (логин).
+        full_name:
+          type: string
+          description: Полное имя пользователя.
+          example: Иван Иванов
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: Пароль пользователя.
+
+    RegisterResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email пользователя.
+        password:
+          type: string
+          format: password
+          description: Пароль.
+
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          description: Refresh token.
+
+    LoginResponse:
+      type: object
+      required: [access_token, refresh_token, user]
+      properties:
+        access_token:
+          type: string
+          description: Access token.
+        refresh_token:
+          type: string
+          description: Refresh token.
+        user:
+          $ref: "#/components/schemas/User"
+
+    User:
+      type: object
+      required: [id, email, full_name, is_active, created_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        email:
+          type: string
+          format: email
+          description: Email.
+        full_name:
+          type: string
+          description: ФИО.
+        is_active:
+          type: boolean
+          description: Активен ли.
+        created_at:
+          $ref: "#/components/schemas/DateTime"
+
+    UserLite:
+      type: object
+      required: [id, full_name]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        full_name:
+          type: string
+          description: Имя.
+
+    Project:
+      type: object
+      required: [id, key, name, created_by, created_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        key:
+          type: string
+          maxLength: 20
+          description: Ключ проекта (для ключей задач).
+          example: PAY
+        name:
+          type: string
+          description: Название.
+        created_by:
+          $ref: "#/components/schemas/UUID"
+          description: Создатель.
+        created_at:
+          $ref: "#/components/schemas/DateTime"
+
+    CreateProjectRequest:
+      type: object
+      required: [key, name]
+      properties:
+        key:
+          type: string
+          minLength: 2
+          maxLength: 20
+          description: Уникальный ключ проекта.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Название проекта.
+
+    ProjectRole:
+      type: string
+      enum: [project_member, project_admin]
+      description: Роль в проекте.
+
+    ProjectUser:
+      type: object
+      required: [project_id, user_id, role]
+      properties:
+        project_id:
+          $ref: "#/components/schemas/UUID"
+        user_id:
+          $ref: "#/components/schemas/UUID"
+        role:
+          $ref: "#/components/schemas/ProjectRole"
+
+    ProjectUserExpanded:
+      type: object
+      required: [user, role]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        role:
+          $ref: "#/components/schemas/ProjectRole"
+
+    AddProjectUserRequest:
+      type: object
+      required: [user_id, role]
+      properties:
+        user_id:
+          $ref: "#/components/schemas/UUID"
+        role:
+          $ref: "#/components/schemas/ProjectRole"
+
+    StatusCategory:
+      type: string
+      enum: [todo, in_progress, done]
+      description: Категория статуса.
+
+    Status:
+      type: object
+      required: [id, project_id, name, category, sort_order]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        project_id:
+          $ref: "#/components/schemas/UUID"
+        name:
+          type: string
+          description: Имя статуса.
+        category:
+          $ref: "#/components/schemas/StatusCategory"
+        sort_order:
+          type: integer
+          description: Порядок.
+
+    CreateStatusRequest:
+      type: object
+      required: [name, category, sort_order]
+      properties:
+        name:
+          type: string
+          description: Имя.
+        category:
+          $ref: "#/components/schemas/StatusCategory"
+        sort_order:
+          type: integer
+          description: Порядок.
+
+    UpdateStatusRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/StatusCategory"
+        sort_order:
+          type: integer
+
+    Criticality:
+      type: object
+      required: [id, name, level]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        name:
+          type: string
+          description: Название.
+        level:
+          type: integer
+          description: Уровень.
+
+    IssueType:
+      type: string
+      enum: [epic, task]
+      description: Тип задачи.
+
+    Issue:
+      type: object
+      required: [id, project_id, key, type, title, status_id, author_id, created_at, updated_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        project_id:
+          $ref: "#/components/schemas/UUID"
+        key:
+          type: string
+          description: Ключ задачи.
+          example: PAY-123
+        type:
+          $ref: "#/components/schemas/IssueType"
+        title:
+          type: string
+          description: Заголовок.
+        description:
+          type: string
+          nullable: true
+          description: Описание.
+        status_id:
+          $ref: "#/components/schemas/UUID"
+          description: Статус.
+        criticality_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+          description: Критичность.
+        author_id:
+          $ref: "#/components/schemas/UUID"
+          description: Автор.
+        assignee_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+          description: Исполнитель.
+        parent_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+          description: Родитель (иерархия).
+        start_date:
+          $ref: "#/components/schemas/Date"
+          nullable: true
+          description: План начала.
+        due_date:
+          $ref: "#/components/schemas/Date"
+          nullable: true
+          description: Дедлайн.
+        taken_in_work_at:
+          $ref: "#/components/schemas/DateTime"
+          nullable: true
+          description: Взято в работу.
+        resolved_at:
+          $ref: "#/components/schemas/DateTime"
+          nullable: true
+          description: Завершено.
+        planned_hours:
+          $ref: "#/components/schemas/Numeric"
+          nullable: true
+          description: План часов.
+        created_at:
+          $ref: "#/components/schemas/DateTime"
+        updated_at:
+          $ref: "#/components/schemas/DateTime"
+
+    CreateIssueRequest:
+      type: object
+      required: [type, title, status_id]
+      properties:
+        type:
+          $ref: "#/components/schemas/IssueType"
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status_id:
+          $ref: "#/components/schemas/UUID"
+        criticality_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+        assignee_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+        parent_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+        start_date:
+          $ref: "#/components/schemas/Date"
+          nullable: true
+        due_date:
+          $ref: "#/components/schemas/Date"
+          nullable: true
+        planned_hours:
+          $ref: "#/components/schemas/Numeric"
+          nullable: true
+
+    UpdateIssueRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status_id:
+          $ref: "#/components/schemas/UUID"
+        criticality_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+        assignee_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+        parent_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+        start_date:
+          $ref: "#/components/schemas/Date"
+          nullable: true
+        due_date:
+          $ref: "#/components/schemas/Date"
+          nullable: true
+        planned_hours:
+          $ref: "#/components/schemas/Numeric"
+          nullable: true
+
+    IssueLinkType:
+      type: string
+      enum: [blocks, relates, clones, duplicates]
+      description: |
+        blocks — source блокирует target (source blocks target).
+        relates — произвольная связь.
+        clones — target является клоном source.
+        duplicates — target дублирует source.
+
+    IssueLink:
+      type: object
+      required: [id, source_id, target_id, link_type]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        source_id:
+          $ref: "#/components/schemas/UUID"
+        target_id:
+          $ref: "#/components/schemas/UUID"
+        link_type:
+          $ref: "#/components/schemas/IssueLinkType"
+
+    CreateIssueLinkRequest:
+      type: object
+      required: [target_issue_id, link_type]
+      description: "Создаёт связь от текущей задачи (source) к target_issue_id. Направление: source → target."
+      properties:
+        target_issue_id:
+          $ref: "#/components/schemas/UUID"
+          description: ID целевой задачи (в том же проекте).
+        link_type:
+          $ref: "#/components/schemas/IssueLinkType"
+
+    IssueWatcher:
+      type: object
+      required: [issue_id, user_id]
+      properties:
+        issue_id:
+          $ref: "#/components/schemas/UUID"
+        user_id:
+          $ref: "#/components/schemas/UUID"
+
+    AddWatcherRequest:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          $ref: "#/components/schemas/UUID"
+
+    IssueComment:
+      type: object
+      required: [id, issue_id, author_id, body, created_at, updated_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        issue_id:
+          $ref: "#/components/schemas/UUID"
+        author_id:
+          $ref: "#/components/schemas/UUID"
+        body:
+          type: string
+        created_at:
+          $ref: "#/components/schemas/DateTime"
+        updated_at:
+          $ref: "#/components/schemas/DateTime"
+
+    CreateCommentRequest:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+
+    UpdateCommentRequest:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+
+    PrepareAttachmentRequest:
+      type: object
+      required: [file_name, mime_type, size_bytes]
+      properties:
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        size_bytes:
+          type: integer
+          minimum: 1
+
+    PrepareAttachmentResponse:
+      type: object
+      required: [upload]
+      properties:
+        upload:
+          type: object
+          required: [storage_key, upload_url, headers, fields, method, expires_in]
+          properties:
+            storage_key:
+              type: string
+            upload_url:
+              type: string
+              format: uri
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+            fields:
+              type: object
+              additionalProperties:
+                type: string
+            method:
+              type: string
+              enum: [POST]
+            expires_in:
+              type: integer
+
+    CreateAttachmentRequest:
+      type: object
+      required: [storage_key, file_name, mime_type, size_bytes]
+      properties:
+        storage_key:
+          type: string
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        size_bytes:
+          type: integer
+
+    IssueAttachment:
+      type: object
+      required: [id, issue_id, uploaded_by, file_name, mime_type, size_bytes, storage_key, created_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        issue_id:
+          $ref: "#/components/schemas/UUID"
+        uploaded_by:
+          $ref: "#/components/schemas/UUID"
+        file_name:
+          type: string
+        mime_type:
+          type: string
+        size_bytes:
+          type: integer
+        storage_key:
+          type: string
+        created_at:
+          $ref: "#/components/schemas/DateTime"
+
+    WikiPage:
+      type: object
+      required: [id, project_id, parent_id, title, content_md, rendered_html, version, created_by, updated_by, created_at, updated_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        project_id:
+          $ref: "#/components/schemas/UUID"
+        parent_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+        title:
+          type: string
+        content_md:
+          type: string
+        rendered_html:
+          type: string
+        version:
+          type: integer
+        created_by:
+          $ref: "#/components/schemas/UUID"
+        updated_by:
+          $ref: "#/components/schemas/UUID"
+        created_at:
+          $ref: "#/components/schemas/DateTime"
+        updated_at:
+          $ref: "#/components/schemas/DateTime"
+
+    WikiPageTreeItem:
+      type: object
+      required: [id, project_id, parent_id, title, version, updated_at, children]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        project_id:
+          $ref: "#/components/schemas/UUID"
+        parent_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+        title:
+          type: string
+        version:
+          type: integer
+        updated_at:
+          $ref: "#/components/schemas/DateTime"
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/WikiPageTreeItem"
+
+    WikiPageRevision:
+      type: object
+      required: [id, page_id, project_id, parent_id, version, title, content_md, rendered_html, created_by, created_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        page_id:
+          $ref: "#/components/schemas/UUID"
+        project_id:
+          $ref: "#/components/schemas/UUID"
+        parent_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+        version:
+          type: integer
+        title:
+          type: string
+        content_md:
+          type: string
+        rendered_html:
+          type: string
+        created_by:
+          $ref: "#/components/schemas/UUID"
+        created_at:
+          $ref: "#/components/schemas/DateTime"
+
+    CreateWikiPageRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        content_md:
+          type: string
+          default: ""
+        parent_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+
+    UpdateWikiPageRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        content_md:
+          type: string
+        parent_id:
+          $ref: "#/components/schemas/UUID"
+          nullable: true
+
+    RestoreWikiPageRequest:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: integer
+          minimum: 1
+
+    RenderWikiContentRequest:
+      type: object
+      properties:
+        content_md:
+          type: string
+          default: ""
+
+    RenderWikiContentResponse:
+      type: object
+      required: [rendered_html]
+      properties:
+        rendered_html:
+          type: string
+
+    PrepareWikiAttachmentRequest:
+      type: object
+      required: [file_name, mime_type, size_bytes]
+      properties:
+        file_name:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        mime_type:
+          type: string
+          minLength: 1
+          maxLength: 255
+        size_bytes:
+          type: integer
+          minimum: 1
+
+    PrepareWikiAttachmentResponse:
+      type: object
+      required: [upload]
+      properties:
+        upload:
+          type: object
+          required: [storage_key, upload_url, headers, fields, method, expires_in]
+          properties:
+            storage_key:
+              type: string
+            upload_url:
+              type: string
+              format: uri
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+            fields:
+              type: object
+              additionalProperties:
+                type: string
+            method:
+              type: string
+              enum: [POST]
+            expires_in:
+              type: integer
+
+    CreateWikiAttachmentRequest:
+      type: object
+      required: [storage_key, file_name, mime_type, size_bytes]
+      properties:
+        storage_key:
+          type: string
+        file_name:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        mime_type:
+          type: string
+          minLength: 1
+          maxLength: 255
+        size_bytes:
+          type: integer
+          minimum: 1
+
+    WikiPageAttachment:
+      type: object
+      required: [id, page_id, uploaded_by, file_name, mime_type, size_bytes, storage_key, created_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        page_id:
+          $ref: "#/components/schemas/UUID"
+        uploaded_by:
+          $ref: "#/components/schemas/UUID"
+        file_name:
+          type: string
+        mime_type:
+          type: string
+          nullable: true
+        size_bytes:
+          type: integer
+        storage_key:
+          type: string
+        created_at:
+          $ref: "#/components/schemas/DateTime"
+
+    WikiAttachmentDownloadResponse:
+      type: object
+      required: [download_url]
+      properties:
+        download_url:
+          type: string
+          format: uri
+
+    Worklog:
+      type: object
+      required: [id, issue_id, user_id, work_date, hours]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        issue_id:
+          $ref: "#/components/schemas/UUID"
+        user_id:
+          $ref: "#/components/schemas/UUID"
+        work_date:
+          $ref: "#/components/schemas/Date"
+        hours:
+          $ref: "#/components/schemas/Numeric"
+        comment:
+          type: string
+          nullable: true
+
+    CreateWorklogRequest:
+      type: object
+      required: [work_date, hours]
+      properties:
+        work_date:
+          $ref: "#/components/schemas/Date"
+        hours:
+          $ref: "#/components/schemas/Numeric"
+          minimum: 0.01
+        comment:
+          type: string
+          nullable: true
+
+    UpdateWorklogRequest:
+      type: object
+      properties:
+        work_date:
+          $ref: "#/components/schemas/Date"
+        hours:
+          $ref: "#/components/schemas/Numeric"
+        comment:
+          type: string
+          nullable: true
+
+    NotificationScope:
+      type: string
+      enum: [ALL, CREATE_AND_RESOLVE, NONE]
+
+    NotificationSetting:
+      type: object
+      required: [user_id, project_id, scope]
+      properties:
+        user_id:
+          $ref: "#/components/schemas/UUID"
+        project_id:
+          $ref: "#/components/schemas/UUID"
+        scope:
+          $ref: "#/components/schemas/NotificationScope"
+
+    UpdateNotificationSettingRequest:
+      type: object
+      required: [scope]
+      properties:
+        scope:
+          $ref: "#/components/schemas/NotificationScope"
+
+    NotificationEventType:
+      type: string
+      enum: [created, updated, commented, resolved, reopened]
+
+    NotificationChannel:
+      type: string
+      enum: [in_app, email]
+
+    NotificationEvent:
+      type: object
+      required: [id, issue_id, event_type, actor_id, created_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        issue_id:
+          $ref: "#/components/schemas/UUID"
+        event_type:
+          $ref: "#/components/schemas/NotificationEventType"
+        actor_id:
+          $ref: "#/components/schemas/UUID"
+        created_at:
+          $ref: "#/components/schemas/DateTime"
+
+    UserNotification:
+      type: object
+      required: [id, user_id, event_id, channel, is_read, created_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        user_id:
+          $ref: "#/components/schemas/UUID"
+        event_id:
+          $ref: "#/components/schemas/UUID"
+        channel:
+          $ref: "#/components/schemas/NotificationChannel"
+        is_read:
+          type: boolean
+        created_at:
+          $ref: "#/components/schemas/DateTime"
+
+    MarkReadRequest:
+      type: object
+      required: [notification_ids]
+      properties:
+        notification_ids:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/UUID"
+
+    IssueLite:
+      type: object
+      required: [id, key, title]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        key:
+          type: string
+        title:
+          type: string
+
+    UserNotificationJoined:
+      type: object
+      required: [notification, event, issue, actor]
+      properties:
+        notification:
+          $ref: "#/components/schemas/UserNotification"
+        event:
+          $ref: "#/components/schemas/NotificationEvent"
+        issue:
+          $ref: "#/components/schemas/IssueLite"
+        actor:
+          $ref: "#/components/schemas/UserLite"
+
+    WorklogSummary:
+      type: object
+      required: [planned_hours, logged_hours]
+      properties:
+        planned_hours:
+          $ref: "#/components/schemas/Numeric"
+          nullable: true
+        logged_hours:
+          $ref: "#/components/schemas/Numeric"
+
+    IssueDetailsResponse:
+      type: object
+      required: [issue, watchers, comments, attachments, worklog_summary]
+      properties:
+        issue:
+          $ref: "#/components/schemas/Issue"
+        watchers:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserLite"
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/IssueComment"
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/IssueAttachment"
+        worklog_summary:
+          $ref: "#/components/schemas/WorklogSummary"
+
+    Dashboard:
+      type: object
+      required: [id, project_id, owner_id, name]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        project_id:
+          $ref: "#/components/schemas/UUID"
+        owner_id:
+          $ref: "#/components/schemas/UUID"
+        name:
+          type: string
+
+    WidgetType:
+      type: string
+      enum: [worklog_by_user, plan_fact, issues_count]
+
+    DashboardWidget:
+      type: object
+      required: [id, dashboard_id, widget_type, config_json, sort_order]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        dashboard_id:
+          $ref: "#/components/schemas/UUID"
+        widget_type:
+          $ref: "#/components/schemas/WidgetType"
+        config_json:
+          type: object
+        sort_order:
+          type: integer
+
+    CreateDashboardRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
+    UpdateDashboardRequest:
+      type: object
+      properties:
+        name:
+          type: string
+
+    DashboardDetailsResponse:
+      type: object
+      required: [dashboard, widgets]
+      properties:
+        dashboard:
+          $ref: "#/components/schemas/Dashboard"
+        widgets:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardWidget"
+
+    CreateWidgetRequest:
+      type: object
+      required: [widget_type, config_json, sort_order]
+      properties:
+        widget_type:
+          $ref: "#/components/schemas/WidgetType"
+        config_json:
+          type: object
+        sort_order:
+          type: integer
+
+    UpdateWidgetRequest:
+      type: object
+      properties:
+        config_json:
+          type: object
+        sort_order:
+          type: integer
+
+    ReportWorklogsByUser:
+      type: object
+      required: [from, to, items, total_hours]
+      properties:
+        from:
+          $ref: "#/components/schemas/Date"
+        to:
+          $ref: "#/components/schemas/Date"
+        items:
+          type: array
+          items:
+            type: object
+            required: [user, hours]
+            properties:
+              user:
+                $ref: "#/components/schemas/UserLite"
+              hours:
+                $ref: "#/components/schemas/Numeric"
+        total_hours:
+          $ref: "#/components/schemas/Numeric"
+
+    ReportPlanFact:
+      type: object
+      required: [planned_hours, logged_hours, delta_hours]
+      properties:
+        planned_hours:
+          $ref: "#/components/schemas/Numeric"
+        logged_hours:
+          $ref: "#/components/schemas/Numeric"
+        delta_hours:
+          $ref: "#/components/schemas/Numeric"
+
+    ReportIssuesCount:
+      type: object
+      required: [total, done]
+      properties:
+        total:
+          type: integer
+        done:
+          type: integer
+        by_epic:
+          type: array
+          items:
+            type: object
+            required: [epic_key, total, done]
+            properties:
+              epic_key:
+                type: string
+              total:
+                type: integer
+              done:
+                type: integer
+
+    PagedUsers:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        total:
+          type: integer
+
+    PagedProjects:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Project"
+        total:
+          type: integer
+
+    PagedProjectUsers:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectUserExpanded"
+        total:
+          type: integer
+
+    PagedIssues:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Issue"
+        total:
+          type: integer
+
+    PagedComments:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/IssueComment"
+        total:
+          type: integer
+
+    PagedWorklogs:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Worklog"
+        total:
+          type: integer
+
+    PagedWorklogsWithSummary:
+      type: object
+      required: [items, total, summary]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Worklog"
+        total:
+          type: integer
+        summary:
+          $ref: "#/components/schemas/WorklogSummary"
+
+    PagedUserNotificationsJoined:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserNotificationJoined"
+        total:
+          type: integer
+
+    PagedDashboards:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Dashboard"
+        total:
+          type: integer
+    
+    Schedule:
+      type: object
+      required:
+        - id
+        - user_id
+        - date
+        - planned_hours
+        - created_at
+        - updated_at
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        user_id:
+          $ref: "#/components/schemas/UUID"
+        date:
+          $ref: "#/components/schemas/Date"
+        planned_hours:
+          type: number
+          format: double
+          description: Плановое количество рабочих часов в этот день.
+          example: 8.0
+        comment:
+          type: string
+          nullable: true
+          description: Комментарий (например, "отпуск", "больничный").
+        created_at:
+          $ref: "#/components/schemas/DateTime"
+        updated_at:
+          $ref: "#/components/schemas/DateTime"
+
+    ScheduleWithUser:
+      allOf:
+        - $ref: "#/components/schemas/Schedule"
+        - type: object
+          properties:
+            user:
+              $ref: "#/components/schemas/UserLite"
+
+    CreateScheduleRequest:
+      type: object
+      required:
+        - date
+        - planned_hours
+      properties:
+        date:
+          $ref: "#/components/schemas/Date"
+        planned_hours:
+          type: number
+          format: double
+          minimum: 0
+          description: Количество плановых часов.
+        comment:
+          type: string
+          nullable: true
+
+    UpdateScheduleRequest:
+      type: object
+      properties:
+        planned_hours:
+          type: number
+          format: double
+          minimum: 0
+        comment:
+          type: string
+          nullable: true
+
+    PagedSchedules:
+      type: object
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Schedule"
+        total:
+          type: integer
+
+    PagedSchedulesWithUser:
+      type: object
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleWithUser"
+        total:
+          type: integer
+
+    OnboardingRecommendationReason:
+      type: object
+      required: [summary, facts]
+      description: См. правила explainability в backend/docs/onboarding_signals.md
+      properties:
+        summary:
+          type: string
+        facts:
+          type: object
+          additionalProperties: true
+
+    OnboardingRecommendationItem:
+      type: object
+      required: [id, entity_type, title, score, reason]
+      description: См. формулы скоринга в backend/docs/onboarding_signals.md
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        entity_type:
+          type: string
+          enum: [wiki_page, issue, user]
+        title:
+          type: string
+        score:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+        reason:
+          $ref: "#/components/schemas/OnboardingRecommendationReason"
+
+    OnboardingRecommendationSection:
+      type: object
+      required: [section, items]
+      properties:
+        section:
+          type: string
+          enum: [wiki, issues, users]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OnboardingRecommendationItem"
+
+    OnboardingSignalsResponse:
+      type: object
+      required: [project_id, generated_at, sections]
+      description: |
+        API response shape for onboarding recommendations.
+        Source of truth for heuristics/limits: backend/docs/onboarding_signals.md
+      properties:
+        project_id:
+          $ref: "#/components/schemas/UUID"
+        generated_at:
+          $ref: "#/components/schemas/DateTime"
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/OnboardingRecommendationSection"
+
+    OnboardingReadItem:
+      type: object
+      required: [page_id, title, reason]
+      properties:
+        page_id:
+          $ref: "#/components/schemas/UUID"
+        title:
+          type: string
+        reason:
+          type: string
+        score:
+          type: number
+          format: double
+          nullable: true
+
+    OnboardingIssueToReviewItem:
+      type: object
+      required: [issue_id, title, reason]
+      properties:
+        issue_id:
+          $ref: "#/components/schemas/UUID"
+        title:
+          type: string
+        reason:
+          type: string
+        score:
+          type: number
+          format: double
+          nullable: true
+
+    OnboardingKeyPersonItem:
+      type: object
+      required: [user_id, full_name, reason]
+      properties:
+        user_id:
+          $ref: "#/components/schemas/UUID"
+        full_name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        reason:
+          type: string
+        score:
+          type: number
+          format: double
+          nullable: true
+
+    OnboardingRecommendationsResponse:
+      type: object
+      required: [reads, issues_to_review, key_people, generated_at, cached]
+      properties:
+        reads:
+          type: array
+          items:
+            $ref: "#/components/schemas/OnboardingReadItem"
+        issues_to_review:
+          type: array
+          items:
+            $ref: "#/components/schemas/OnboardingIssueToReviewItem"
+        key_people:
+          type: array
+          items:
+            $ref: "#/components/schemas/OnboardingKeyPersonItem"
+        generated_at:
+          $ref: "#/components/schemas/DateTime"
+        cached:
+          type: boolean
+          description: true, если ответ взят из кэша в пределах TTL.
+
+    ProjectOnboardingPreferences:
+      type: object
+      required: [new_employee_mode]
+      properties:
+        new_employee_mode:
+          type: boolean
+          default: false
+
+    UpdateProjectOnboardingPreferencesRequest:
+      type: object
+      required: [new_employee_mode]
+      properties:
+        new_employee_mode:
+          type: boolean
+
+    ProjectOnboardingPreferencesResponse:
+      type: object
+      required: [preferences]
+      properties:
+        preferences:
+          $ref: "#/components/schemas/ProjectOnboardingPreferences"
+
+    OnboardingAssigneeItem:
+      type: object
+      required: [user_id, full_name]
+      properties:
+        user_id:
+          $ref: "#/components/schemas/UUID"
+        full_name:
+          type: string
+        email:
+          type: string
+          nullable: true
+
+    ProjectOnboardingAssigneesResponse:
+      type: object
+      required: [assignees]
+      properties:
+        assignees:
+          type: array
+          items:
+            $ref: "#/components/schemas/OnboardingAssigneeItem"
+
+    UpdateProjectOnboardingAssigneesRequest:
+      type: object
+      required: [user_ids]
+      properties:
+        user_ids:
+          type: array
+          items:
+            $ref: "#/components/schemas/UUID"

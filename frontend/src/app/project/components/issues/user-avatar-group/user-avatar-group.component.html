@@ -1,0 +1,16 @@
+<div class="avatar-group">
+    <j-avatar *ngFor="let user of visibleUsers"
+              className="avatar-group__avatar"
+              [size]="26"
+              nz-tooltip
+              [nzTooltipMouseEnterDelay]="0.2"
+              [nzTooltipTitle]="user.name || user.email"
+              [name]="user.name || user.email || '?'"
+              [avatarUrl]="user.avatarUrl">
+    </j-avatar>
+
+    <span *ngIf="hiddenCount > 0"
+          class="avatar-group__overflow">
+        +{{ hiddenCount }}
+    </span>
+</div>

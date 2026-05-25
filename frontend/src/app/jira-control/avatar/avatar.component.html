@@ -1,0 +1,5 @@
+<div [class]="className ? 'avatar-container ' + className : 'avatar-container'"
+     [class.avatar-container--fallback]="!hasAvatar"
+     [ngStyle]="style">
+    <span *ngIf="!hasAvatar">{{ initials }}</span>
+</div>

@@ -1,0 +1,231 @@
+<div class="onboarding-page">
+    <breadcrumbs [items]="breadcrumbs"></breadcrumbs>
+
+    <section class="onboarding-hero">
+        <div class="onboarding-hero__copy">
+            <div class="onboarding-hero__eyebrow">Auto-onboarding</div>
+            <h1 class="onboarding-hero__title">Режим нового сотрудника</h1>
+            <p class="onboarding-hero__description">
+                Система собирает onboarding прямо из живых данных проекта: документации, задач и активности команды.
+            </p>
+        </div>
+
+        <div class="onboarding-hero__panel">
+            <div class="onboarding-hero__actions">
+                <j-button className="btn-primary"
+                          type="button"
+                          [isWorking]="isRefreshing"
+                          [disabled]="isLoading"
+                          (click)="refreshRecommendations()">
+                    Пересчитать рекомендации
+                </j-button>
+
+                <a *ngIf="projectId"
+                   class="onboarding-link"
+                   [routerLink]="['/projects', projectId, 'settings']">
+                    Открыть настройки проекта
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <div *ngIf="isProjectAdmin"
+         class="onboarding-assign">
+        <div class="onboarding-assign__title">Назначить onboarding участнику</div>
+
+        <div class="onboarding-assign__controls">
+            <select class="form-input onboarding-assign__select"
+                    [ngModel]="selectedAssigneeId"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="isSavingAssignees || !availableAssigneeUsers.length"
+                    (ngModelChange)="selectOnboardingAssignee($event)">
+                <option [ngValue]="''">Выберите участника</option>
+                <option *ngFor="let user of availableAssigneeUsers"
+                        [ngValue]="user.id">
+                    {{ user.name || user.email }}
+                </option>
+            </select>
+
+            <j-button className="btn-primary"
+                      type="button"
+                      [isWorking]="isSavingAssignees"
+                      [disabled]="!selectedAssigneeId || isSavingAssignees"
+                      (click)="addOnboardingAssignee()">
+                Назначить
+            </j-button>
+        </div>
+
+        <div *ngIf="onboardingAssignees.length"
+             class="onboarding-assign__list">
+            <span *ngFor="let user of onboardingAssignees"
+                  class="onboarding-assign__chip">
+                {{ user.name || user.email }}
+                <button type="button"
+                        [disabled]="isSavingAssignees"
+                        (click)="removeOnboardingAssignee(user.id)">
+                    ×
+                </button>
+            </span>
+        </div>
+    </div>
+
+    <div *ngIf="assigneeErrorMessage"
+         class="onboarding-alert onboarding-alert--error">
+        {{ assigneeErrorMessage }}
+    </div>
+
+    <div *ngIf="errorMessage"
+         class="onboarding-alert onboarding-alert--error">
+        {{ errorMessage }}
+    </div>
+
+    <section *ngIf="isLoading && !recommendations"
+             class="onboarding-empty onboarding-empty--loading">
+        Система анализирует проект и собирает onboarding-рекомендации...
+    </section>
+
+    <section *ngIf="recommendations"
+             class="onboarding-summary">
+        <div class="onboarding-summary__item">
+            <span class="onboarding-summary__label">Сгенерировано</span>
+            <strong>{{ recommendations.generatedAt | date: 'dd.MM.yyyy HH:mm' }}</strong>
+        </div>
+        <div class="onboarding-summary__item">
+            <span class="onboarding-summary__label">Источник</span>
+            <strong>{{ recommendations.cached ? 'Кэш проекта' : 'Свежий пересчет' }}</strong>
+        </div>
+        <div class="onboarding-summary__item">
+            <span class="onboarding-summary__label">Секций</span>
+            <strong>3</strong>
+        </div>
+    </section>
+
+    <section *ngIf="recommendations"
+             class="onboarding-sections">
+        <article class="onboarding-section">
+            <div class="onboarding-section__header">
+                <div>
+                    <h2 class="onboarding-section__title">Что читать</h2>
+                    <p class="onboarding-section__text">
+                        Самые полезные страницы Wiki по свежести, насыщенности и активности обновлений.
+                    </p>
+                </div>
+                <span class="onboarding-section__count">{{ reads.length }}</span>
+            </div>
+
+            <div *ngIf="reads.length; else emptyReadsTmpl"
+                 class="recommendation-grid">
+                <div class="recommendation-card"
+                     *ngFor="let item of reads; trackBy: trackByRead">
+                    <div class="recommendation-card__header">
+                        <div>
+                            <div class="recommendation-card__title">{{ item.title }}</div>
+                            <div class="recommendation-card__reason">{{ item.reason }}</div>
+                        </div>
+                        <span *ngIf="item.score !== null"
+                              class="recommendation-card__score">
+                            {{ item.score | number: '1.0-0' }}
+                        </span>
+                    </div>
+
+                    <a class="recommendation-card__action"
+                       [routerLink]="['/projects', projectId, 'documentation']"
+                       [queryParams]="{ pageId: item.pageId }">
+                        Открыть страницу
+                    </a>
+                </div>
+            </div>
+        </article>
+
+        <article class="onboarding-section">
+            <div class="onboarding-section__header">
+                <div>
+                    <h2 class="onboarding-section__title">Какие задачи посмотреть</h2>
+                    <p class="onboarding-section__text">
+                        Приоритетные задачи и эпики с активным обсуждением, высокой критичностью и связями.
+                    </p>
+                </div>
+                <span class="onboarding-section__count">{{ issuesToReview.length }}</span>
+            </div>
+
+            <div *ngIf="issuesToReview.length; else emptyIssuesTmpl"
+                 class="recommendation-grid">
+                <div class="recommendation-card"
+                     *ngFor="let item of issuesToReview; trackBy: trackByIssue">
+                    <div class="recommendation-card__header">
+                        <div>
+                            <div class="recommendation-card__title">{{ item.title }}</div>
+                            <div class="recommendation-card__reason">{{ item.reason }}</div>
+                        </div>
+                        <span *ngIf="item.score !== null"
+                              class="recommendation-card__score">
+                            {{ item.score | number: '1.0-0' }}
+                        </span>
+                    </div>
+
+                    <a class="recommendation-card__action"
+                       [routerLink]="['/projects', projectId, 'issue', item.issueId]">
+                        Открыть задачу
+                    </a>
+                </div>
+            </div>
+        </article>
+
+        <article class="onboarding-section">
+            <div class="onboarding-section__header">
+                <div>
+                    <h2 class="onboarding-section__title">Кто ключевые люди</h2>
+                    <p class="onboarding-section__text">
+                        Участники с сильной ролью в проекте и заметной активностью в разных зонах продукта.
+                    </p>
+                </div>
+                <span class="onboarding-section__count">{{ keyPeople.length }}</span>
+            </div>
+
+            <div *ngIf="keyPeople.length; else emptyPeopleTmpl"
+                 class="recommendation-grid">
+                <div class="recommendation-card"
+                     *ngFor="let item of keyPeople; trackBy: trackByPerson">
+                    <div class="recommendation-card__header">
+                        <div>
+                            <div class="recommendation-card__title">{{ item.fullName }}</div>
+                            <div class="recommendation-card__subtitle"
+                                 *ngIf="item.email">
+                                {{ item.email }}
+                            </div>
+                            <div class="recommendation-card__reason">{{ item.reason }}</div>
+                        </div>
+                        <span *ngIf="item.score !== null"
+                              class="recommendation-card__score">
+                            {{ item.score | number: '1.0-0' }}
+                        </span>
+                    </div>
+
+                    <a *ngIf="personMailto(item) as mailto"
+                       class="recommendation-card__action"
+                       [href]="mailto">
+                        Написать человеку
+                    </a>
+                </div>
+            </div>
+        </article>
+    </section>
+
+    <section *ngIf="recommendations && !hasAnyRecommendations"
+             class="onboarding-empty">
+        Пока мало данных для рекомендаций. Когда в проекте появятся Wiki-страницы, задачи и активность команды,
+        здесь соберется onboarding-подборка.
+    </section>
+</div>
+
+<ng-template #emptyReadsTmpl>
+    <div class="recommendation-empty">Wiki-страницы пока не накопили достаточно сигналов.</div>
+</ng-template>
+
+<ng-template #emptyIssuesTmpl>
+    <div class="recommendation-empty">Подходящих задач пока не найдено.</div>
+</ng-template>
+
+<ng-template #emptyPeopleTmpl>
+    <div class="recommendation-empty">Ключевые участники появятся, когда накопится активность в проекте.</div>
+</ng-template>

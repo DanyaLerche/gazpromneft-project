@@ -1,0 +1,149 @@
+.issue-detail-meta-card {
+  background: #f7f8fa;
+  border: 1px solid #d8d1c2;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.issue-detail-meta-card__header {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.issue-detail-meta-card__dates {
+  @apply text-textMedium text-13;
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.issue-detail-chip {
+  align-items: center;
+  background: color-mix(in srgb, var(--issue-detail-chip-color) 14%, white);
+  border: 1px solid color-mix(in srgb, var(--issue-detail-chip-color) 30%, white);
+  border-radius: 999px;
+  color: var(--issue-detail-chip-color);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 10px;
+}
+
+.issue-detail-overdue {
+  background: #fff1f0;
+  border-radius: 999px;
+  color: #cf1322;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 10px;
+}
+
+.issue-attachments {
+  border: 1px solid #d8d1c2;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.issue-attachments__actions {
+  align-items: center;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.issue-attachments__input {
+  display: none;
+}
+
+.issue-attachments__hint {
+  @apply text-textMedium text-13;
+  margin-top: 8px;
+}
+
+.issue-attachments__list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.issue-attachments__item {
+  align-items: center;
+  border-top: 1px solid #e9e3d7;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.issue-attachments__item:first-child {
+  border-top: 0;
+  padding-top: 6px;
+}
+
+.issue-attachments__meta {
+  min-width: 0;
+}
+
+.issue-attachments__name {
+  color: #24372d;
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.issue-attachments__details {
+  @apply text-textMedium text-13;
+  margin-top: 2px;
+}
+
+.issue-attachments__buttons {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  margin-left: 12px;
+}
+
+.issue-effort-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.issue-effort-card {
+  background: #f7f8fa;
+  border: 1px solid #d8d1c2;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.issue-effort-card__label {
+  color: #69786f;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.issue-effort-card__value {
+  color: #24372d;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.issue-detail-danger-button {
+  background: #ffffff;
+  border: 1px solid #d6a394;
+  border-radius: 8px;
+  color: #8f4a37;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 40px;
+  padding: 0 14px;
+  transition: background 0.15s ease;
+}
+
+.issue-detail-danger-button:hover {
+  background: #f8e9e4;
+}

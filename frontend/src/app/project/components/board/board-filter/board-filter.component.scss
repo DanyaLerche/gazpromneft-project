@@ -1,0 +1,119 @@
+.board-filter {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+}
+
+.board-filter__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+}
+
+.board-filter__search {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.6rem;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 0.9rem;
+  background: rgba(249, 250, 252, 0.95);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.board-filter__search:focus-within {
+  border-color: rgba(108, 76, 241, 0.36);
+  box-shadow: 0 0 0 3px rgba(108, 76, 241, 0.12);
+}
+
+.board-filter__search-icon {
+  margin-left: 0.8rem;
+  color: #8f96ab;
+}
+
+.board-filter__search-input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--color-text-strong);
+  font-size: 0.88rem;
+  padding: 0 0.8rem 0 0.55rem;
+}
+
+.board-filter__search-input::placeholder {
+  color: #a0a6bb;
+}
+
+.board-filter__reset {
+  min-height: 2.6rem;
+  padding: 0 0.95rem;
+  border: 1px solid rgba(108, 76, 241, 0.2);
+  border-radius: 0.9rem;
+  background: rgba(108, 76, 241, 0.08);
+  color: #47379f;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.board-filter__reset:hover {
+  background: rgba(108, 76, 241, 0.14);
+  transform: translateY(-1px);
+}
+
+.board-filter__controls {
+  align-items: center;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
+  width: 100%;
+}
+
+.board-filter__control {
+  min-width: 0;
+}
+
+:host ::ng-deep .board-filter__trigger {
+  min-height: 2.5rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--color-border-soft);
+  background: rgba(249, 250, 252, 0.92);
+  color: var(--color-text-default);
+  font-size: 0.84rem;
+}
+
+:host ::ng-deep .board-filter__trigger:hover {
+  border-color: rgba(108, 76, 241, 0.28);
+}
+
+:host ::ng-deep .project-inline-select--open .board-filter__trigger {
+  border-color: rgba(108, 76, 241, 0.42);
+}
+
+@media (max-width: 1279px) {
+  .board-filter__controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  .board-filter {
+    padding: 0.85rem;
+  }
+
+  .board-filter__top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .board-filter__controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

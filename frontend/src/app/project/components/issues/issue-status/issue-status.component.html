@@ -1,0 +1,12 @@
+<div class="mt-6 mb-1 uppercase text-textMedium text-13 font-bold">
+    Статус
+</div>
+<project-inline-select appearance="button"
+                       [triggerClassName]="'btn ' + getClassName(currentStatus)"
+                       [items]="issueStatuses"
+                       [ngModel]="issue.statusId"
+                       valueKey="id"
+                       labelKey="name"
+                       [placeholder]="currentStatus?.name || issue.statusName || issue.status"
+                       (ngModelChange)="updateIssueById($event)">
+</project-inline-select>

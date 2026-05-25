@@ -1,0 +1,8 @@
+<div class="board-dnd"
+     cdkDropListGroup>
+    <kanban-column *ngFor="let status of projectQuery.statuses$ | async"
+                   class="board-dnd-list"
+                   [status]="status"
+                   [issues$]="projectQuery.issueByStatusSorted$(status.id)">
+    </kanban-column>
+</div>

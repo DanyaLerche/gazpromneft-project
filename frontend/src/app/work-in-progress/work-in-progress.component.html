@@ -1,0 +1,230 @@
+<section class="focus-mode">
+  <div class="focus-mode__topbar">
+    <a class="focus-mode__back-button" routerLink="/projects">← Назад на главную</a>
+    <div class="focus-mode__topbar-chip">Личный ритм</div>
+  </div>
+
+  <header class="focus-mode__hero">
+    <div class="focus-mode__hero-copy">
+      <div class="focus-mode__eyebrow">Режим концентрации</div>
+      <h1 class="focus-mode__title">Помодоро-таймер</h1>
+      <p class="focus-mode__subtitle">
+        Работайте интервалами, делайте перерывы по расписанию и держите фокус на одной задаче.
+      </p>
+    </div>
+
+    <div class="focus-mode__glance">
+      <article class="focus-glance">
+        <div class="focus-glance__label">Текущая фаза</div>
+        <div class="focus-glance__value">{{ focusMode.state.phaseLabel }}</div>
+      </article>
+
+      <article class="focus-glance">
+        <div class="focus-glance__label">Сессий сегодня</div>
+        <div class="focus-glance__value">{{ focusMode.state.completedFocusSessions }}</div>
+      </article>
+
+      <article class="focus-glance">
+        <div class="focus-glance__label">Минут в фокусе</div>
+        <div class="focus-glance__value">{{ focusMode.state.focusMinutesToday }}</div>
+      </article>
+    </div>
+  </header>
+
+  <div class="focus-mode__layout">
+    <article class="focus-panel focus-panel--timer">
+      <div class="focus-panel__header">
+        <div class="focus-panel__title">Текущая фаза</div>
+        <div class="focus-panel__meta">{{ focusMode.state.phaseLabel }}</div>
+      </div>
+
+      <div class="focus-panel__body focus-panel__body--timer">
+        <div class="focus-phase-switch">
+          <button
+            *ngFor="let phase of focusMode.phases"
+            type="button"
+            class="focus-phase-switch__button"
+            [class.focus-phase-switch__button--active]="phase.id === focusMode.state.currentPhase"
+            (click)="focusMode.selectPhase(phase.id)"
+          >
+            {{ phase.label }}
+          </button>
+        </div>
+
+        <div class="focus-timer-card">
+          <div class="focus-timer">
+            <div class="focus-timer__value">{{ focusMode.state.timerLabel }}</div>
+            <div
+              class="focus-timer__progress-track"
+              role="progressbar"
+              aria-label="Прогресс помодоро"
+              [attr.aria-valuenow]="focusMode.state.progressPercent"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <div class="focus-timer__progress-fill" [style.width.%]="focusMode.state.progressPercent"></div>
+            </div>
+            <div class="focus-timer__progress-label">{{ focusMode.state.progressPercent }}% завершено</div>
+          </div>
+
+          <aside class="focus-rhythm-note">
+            <div class="focus-rhythm-note__label">Ритм цикла</div>
+            <div class="focus-rhythm-note__value">{{ focusMode.state.sessionsUntilLongBreak }}</div>
+            <p class="focus-rhythm-note__description">
+              фокус-сессий до длинного перерыва по текущему сценарию.
+            </p>
+          </aside>
+        </div>
+
+        <div class="focus-actions">
+          <button type="button" class="focus-button focus-button--primary" (click)="focusMode.toggleTimer()">
+            {{ focusMode.state.isRunning ? 'Пауза' : 'Старт' }}
+          </button>
+          <button type="button" class="focus-button focus-button--ghost" (click)="focusMode.resetCurrentPhase()">
+            Сброс фазы
+          </button>
+          <button type="button" class="focus-button focus-button--ghost" (click)="focusMode.resetProgress()">
+            Сбросить все
+          </button>
+        </div>
+      </div>
+    </article>
+
+    <article class="focus-panel">
+      <div class="focus-panel__header">
+        <div class="focus-panel__title">Статистика сессии</div>
+        <div class="focus-panel__meta">Сегодня</div>
+      </div>
+
+      <div class="focus-stats">
+        <div class="focus-stat">
+          <div class="focus-stat__label">Завершено фокус-сессий</div>
+          <div class="focus-stat__value">{{ focusMode.state.completedFocusSessions }}</div>
+        </div>
+
+        <div class="focus-stat">
+          <div class="focus-stat__label">Минут в фокусе</div>
+          <div class="focus-stat__value">{{ focusMode.state.focusMinutesToday }}</div>
+        </div>
+
+        <div class="focus-stat">
+          <div class="focus-stat__label">Сессий до длинного перерыва</div>
+          <div class="focus-stat__value">{{ focusMode.state.sessionsUntilLongBreak }}</div>
+        </div>
+      </div>
+    </article>
+
+    <article class="focus-panel">
+      <div class="focus-panel__header">
+        <div class="focus-panel__title">Настройки таймера</div>
+        <div class="focus-panel__meta">Сохраняются автоматически</div>
+      </div>
+
+      <div class="focus-settings">
+        <label class="focus-field">
+          <span class="focus-field__label">Фокус (минуты)</span>
+          <input
+            class="focus-field__input"
+            type="number"
+            [value]="focusMode.state.config.focusMinutes"
+            [attr.min]="focusMode.configLimits.focusMinutes.min"
+            [attr.max]="focusMode.configLimits.focusMinutes.max"
+            (change)="updateNumberConfig('focusMinutes', $event)"
+          />
+        </label>
+
+        <label class="focus-field">
+          <span class="focus-field__label">Короткий перерыв (минуты)</span>
+          <input
+            class="focus-field__input"
+            type="number"
+            [value]="focusMode.state.config.shortBreakMinutes"
+            [attr.min]="focusMode.configLimits.shortBreakMinutes.min"
+            [attr.max]="focusMode.configLimits.shortBreakMinutes.max"
+            (change)="updateNumberConfig('shortBreakMinutes', $event)"
+          />
+        </label>
+
+        <label class="focus-field">
+          <span class="focus-field__label">Длинный перерыв (минуты)</span>
+          <input
+            class="focus-field__input"
+            type="number"
+            [value]="focusMode.state.config.longBreakMinutes"
+            [attr.min]="focusMode.configLimits.longBreakMinutes.min"
+            [attr.max]="focusMode.configLimits.longBreakMinutes.max"
+            (change)="updateNumberConfig('longBreakMinutes', $event)"
+          />
+        </label>
+
+        <label class="focus-field">
+          <span class="focus-field__label">Сессий до длинного перерыва</span>
+          <input
+            class="focus-field__input"
+            type="number"
+            [value]="focusMode.state.config.sessionsBeforeLongBreak"
+            [attr.min]="focusMode.configLimits.sessionsBeforeLongBreak.min"
+            [attr.max]="focusMode.configLimits.sessionsBeforeLongBreak.max"
+            (change)="updateNumberConfig('sessionsBeforeLongBreak', $event)"
+          />
+        </label>
+
+        <label class="focus-toggle">
+          <input
+            type="checkbox"
+            [checked]="focusMode.state.config.autoStartBreaks"
+            (change)="updateBooleanConfig('autoStartBreaks', $event)"
+          />
+          <span>Автозапуск перерыва после фокус-сессии</span>
+        </label>
+
+        <label class="focus-toggle">
+          <input
+            type="checkbox"
+            [checked]="focusMode.state.config.autoStartFocus"
+            (change)="updateBooleanConfig('autoStartFocus', $event)"
+          />
+          <span>Автозапуск фокуса после перерыва</span>
+        </label>
+
+        <label class="focus-toggle">
+          <input
+            type="checkbox"
+            [checked]="focusMode.state.config.soundEnabled"
+            (change)="updateBooleanConfig('soundEnabled', $event)"
+          />
+          <span>Звуковой сигнал при смене фазы</span>
+        </label>
+
+        <label class="focus-toggle">
+          <input
+            type="checkbox"
+            [checked]="focusMode.state.config.browserNotificationsEnabled"
+            (change)="updateBooleanConfig('browserNotificationsEnabled', $event)"
+          />
+          <span>Браузерные уведомления при смене фазы</span>
+        </label>
+
+        <div *ngIf="notificationBlocked" class="focus-note focus-note--warning">
+          Уведомления заблокированы в браузере. Разрешите их в настройках сайта.
+        </div>
+
+        <div *ngIf="notificationsUnsupported" class="focus-note">
+          Ваш браузер не поддерживает API уведомлений.
+        </div>
+      </div>
+    </article>
+
+    <article class="focus-panel">
+      <div class="focus-panel__header">
+        <div class="focus-panel__title">Протокол концентрации</div>
+      </div>
+      <ol class="focus-protocol">
+        <li>Перед стартом выберите одну конкретную задачу.</li>
+        <li>Во время фазы фокуса не переключайте контекст.</li>
+        <li>На коротком перерыве встаньте и переключите внимание.</li>
+        <li>После цикла сделайте длинный перерыв и повторите.</li>
+      </ol>
+    </article>
+  </div>
+</section>

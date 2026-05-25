@@ -1,0 +1,20 @@
+<section class="dashboard-stats">
+    <article class="dashboard-stats__card premium-card"
+             *ngFor="let card of cards$ | async"
+             [class.dashboard-stats__card--primary]="card.tone === 'primary'"
+             [class.dashboard-stats__card--success]="card.tone === 'success'"
+             [class.dashboard-stats__card--warning]="card.tone === 'warning'"
+             [class.dashboard-stats__card--danger]="card.tone === 'danger'">
+        <div class="dashboard-stats__icon">
+            <svg-icon [name]="card.icon"
+                      [size]="18">
+            </svg-icon>
+        </div>
+
+        <div class="dashboard-stats__meta">
+            <div class="dashboard-stats__title">{{ card.title }}</div>
+            <div class="dashboard-stats__value">{{ card.value }}</div>
+            <div class="dashboard-stats__description">{{ card.description }}</div>
+        </div>
+    </article>
+</section>

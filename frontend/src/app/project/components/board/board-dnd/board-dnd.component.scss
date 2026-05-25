@@ -1,0 +1,37 @@
+.board-dnd {
+  display: flex;
+  gap: 1.5rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 1rem 0 1.4rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-padding-inline: 1rem;
+}
+
+.board-dnd-list {
+  flex: 0 0 min(24rem, calc(100vw - 7rem));
+  min-height: 420px;
+  min-width: 20rem;
+}
+
+.board-dnd::-webkit-scrollbar {
+  height: 0.55rem;
+}
+
+.board-dnd::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(108, 76, 241, 0.28);
+}
+
+@media (max-width: 1023px) {
+  .board-dnd {
+    gap: 1rem;
+  }
+
+  .board-dnd-list {
+    flex-basis: min(21rem, calc(100vw - 2.25rem));
+    min-width: 18rem;
+  }
+}

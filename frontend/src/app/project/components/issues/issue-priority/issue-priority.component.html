@@ -1,0 +1,35 @@
+<div class="mt-6 mb-1 uppercase text-textMedium text-13 font-bold">
+    Priority
+</div>
+<project-inline-select appearance="button"
+                       triggerClassName="btn btn-secondary"
+                       [items]="priorities"
+                       [ngModel]="selectedPriority"
+                       valueKey="value"
+                       labelKey="value"
+                       [selectedTemplate]="selectedPriorityTmpl"
+                       [optionTemplate]="priorityOptionTmpl"
+                       (ngModelChange)="updateIssue($event)">
+</project-inline-select>
+
+<ng-template #selectedPriorityTmpl
+             let-selected>
+    <div class="flex items-center">
+        <svg-icon [name]="selected?.icon"
+                  [size]="20"
+                  [style.color]="selected?.color">
+        </svg-icon>
+        <span class="ml-3 priority-label">{{ selected?.value }}</span>
+    </div>
+</ng-template>
+
+<ng-template #priorityOptionTmpl
+             let-option>
+    <div class="flex items-center">
+        <svg-icon [name]="option.icon"
+                  [size]="20"
+                  [style.color]="option.color">
+        </svg-icon>
+        <span class="ml-3 priority-label font-semibold uppercase text-textMedium text-13">{{ option.value }}</span>
+    </div>
+</ng-template>

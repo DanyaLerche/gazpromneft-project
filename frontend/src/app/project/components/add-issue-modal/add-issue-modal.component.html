@@ -1,0 +1,148 @@
+<div class="px-8 py-5">
+    <div class="flex items-center py-3 text-textDarkest">
+        <div class="text-xl">
+            Создать задачу
+        </div>
+        <div class="flex-auto"></div>
+        <j-button icon="times"
+                  [iconSize]="24"
+                  (click)="cancel()"
+                  [className]="'btn-empty'">
+        </j-button>
+    </div>
+    <form class="issue-form"
+          (ngSubmit)="submitForm()"
+          [formGroup]="issueForm">
+        <div class="form-group">
+            <label class="label">
+                Тип
+            </label>
+            <issue-type-select [control]="f?.type"></issue-type-select>
+        </div>
+        <div class="mt-3 form-group">
+            <label class="label">
+                Статус
+            </label>
+            <project-inline-select class="w-full"
+                                   formControlName="statusId"
+                                   [items]="statuses$ | async"
+                                   valueKey="id"
+                                   labelKey="name"
+                                   placeholder="Выберите статус">
+            </project-inline-select>
+            <div *ngIf="f?.statusId?.touched && f?.statusId?.invalid"
+                 class="mt-2 text-sm text-red-600">
+                Выберите статус.
+            </div>
+        </div>
+        <div class="mt-3 form-group">
+            <label class="label">
+                Критичность
+            </label>
+            <project-inline-select class="w-full"
+                                   formControlName="criticalityId"
+                                   [items]="criticalities$ | async"
+                                   valueKey="id"
+                                   labelKey="name"
+                                   placeholder="Выберите критичность">
+            </project-inline-select>
+        </div>
+        <div class="mt-3 form-group">
+            <label class="label">
+                Название
+            </label>
+            <input class="form-input"
+                   formControlName="title"
+                   jAutofocus
+                   [timerDelay]="500" />
+            <div *ngIf="f?.title?.touched && f?.title?.invalid"
+                 class="mt-2 text-sm text-red-600">
+                Укажите название задачи.
+            </div>
+        </div>
+        <div class="mt-3 form-group">
+            <label class="label">
+                Описание
+            </label>
+            <quill-editor class="content-editor"
+                          [styles]="{'min-height': '120px'}"
+                          [modules]="editorOptions"
+                          formControlName="description"
+                          [placeholder]="''">
+            </quill-editor>
+        </div>
+        <div class="mt-3 form-group">
+            <label class="label">
+                Исполнитель
+            </label>
+            <issue-assignees-select [control]="f?.assigneeId"
+                                    [users]="assignees$ | async">
+            </issue-assignees-select>
+        </div>
+        <div class="mt-3 grid gap-3 md:grid-cols-2">
+            <div class="form-group">
+                <label class="label">
+                    Дата начала
+                </label>
+                <project-date-input formControlName="startDate"
+                                    [max]="f?.dueDate?.value || null"
+                                    label="Дата начала"
+                                    size="large">
+                </project-date-input>
+            </div>
+            <div class="form-group">
+                <label class="label">
+                    Дедлайн
+                </label>
+                <project-date-input formControlName="dueDate"
+                                    [min]="f?.startDate?.value || null"
+                                    label="Дедлайн"
+                                    size="large">
+                </project-date-input>
+            </div>
+        </div>
+        <div *ngIf="issueForm?.hasError('dateRange')"
+             class="mt-2 text-sm text-red-600">
+            Дата окончания не может быть раньше даты начала.
+        </div>
+        <div class="mt-3 form-group">
+            <label class="label">
+                Родительская задача
+            </label>
+            <project-inline-select class="w-full"
+                                   formControlName="parentId"
+                                   [items]="parentIssues$ | async"
+                                   valueKey="id"
+                                   labelKey="title"
+                                   [disabled]="!canSelectParent"
+                                   [allowClear]="true"
+                                   [selectedTemplate]="parentOptionTmpl"
+                                   [optionTemplate]="parentOptionTmpl"
+                                   [placeholder]="canSelectParent ? 'Без родителя' : 'Для epic родитель не требуется'">
+                <ng-template #parentOptionTmpl let-issue>
+                    <span>{{ issue.key }} · {{ issue.title }}</span>
+                </ng-template>
+            </project-inline-select>
+            <div *ngIf="canSelectParent"
+                 class="mt-2 text-xs text-textMedium">
+                В качестве родителя можно выбрать epic или задачу.
+            </div>
+        </div>
+        <div *ngIf="submitError"
+             class="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {{ submitError }}
+        </div>
+        <div class="mt-5 form-group form-action">
+            <j-button className="btn-primary mr-2"
+                      type="submit"
+                      [disabled]="issueForm?.invalid || isSubmitting">
+                {{ isSubmitting ? 'Создание...' : 'Создать' }}
+            </j-button>
+            <j-button className="btn-empty"
+                      type="button"
+                      (click)="cancel()">
+                Отмена
+            </j-button>
+        </div>
+    </form>
+</div>

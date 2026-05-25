@@ -1,0 +1,7 @@
+<span class="priority-badge"
+      [style.--priority-color]="icon?.color || '#6b7280'">
+    <svg-icon [name]="icon?.icon || 'arrow-up'"
+              [size]="14">
+    </svg-icon>
+    <span>{{ priority || 'Medium' }}</span>
+</span>

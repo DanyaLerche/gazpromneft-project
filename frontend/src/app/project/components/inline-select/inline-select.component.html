@@ -1,0 +1,64 @@
+<div class="project-inline-select"
+     [class.project-inline-select--open]="isOpen"
+     [class.project-inline-select--disabled]="disabled">
+    <button type="button"
+            [ngClass]="triggerClasses"
+            [disabled]="disabled"
+            [attr.aria-expanded]="isOpen"
+            (click)="toggleOpen()">
+        <span class="project-inline-select__value"
+              [class.project-inline-select__value--placeholder]="!hasSelection">
+            <ng-container *ngIf="showSelectedValue && hasSelection && selectedTemplate; else defaultValueTmpl"
+                          [ngTemplateOutlet]="selectedTemplate"
+                          [ngTemplateOutletContext]="getSelectedContext()">
+            </ng-container>
+            <ng-template #defaultValueTmpl>
+                {{ displayValue }}
+            </ng-template>
+        </span>
+
+        <span class="project-inline-select__actions">
+            <span *ngIf="allowClear && hasSelection"
+                  class="project-inline-select__clear"
+                  (click)="clear($event)">
+                x
+            </span>
+            <span class="project-inline-select__caret"
+                  [class.project-inline-select__caret--open]="isOpen">
+            </span>
+        </span>
+    </button>
+
+    <div *ngIf="isOpen"
+         class="project-inline-select__menu">
+        <button *ngFor="let item of visibleItems; trackBy: trackByValue"
+                type="button"
+                class="project-inline-select__option"
+                [class.project-inline-select__option--selected]="isItemSelected(item)"
+                [disabled]="isItemDisabled(item)"
+                (click)="selectItem(item)">
+            <span *ngIf="multiple"
+                  class="project-inline-select__check">
+                {{ isItemSelected(item) ? '✓' : '' }}
+            </span>
+
+            <span *ngIf="!multiple"
+                  class="project-inline-select__check project-inline-select__check--single">
+                {{ isItemSelected(item) ? '✓' : '' }}
+            </span>
+
+            <ng-container *ngIf="optionTemplate; else defaultOptionTmpl"
+                          [ngTemplateOutlet]="optionTemplate"
+                          [ngTemplateOutletContext]="getOptionContext(item)">
+            </ng-container>
+            <ng-template #defaultOptionTmpl>
+                <span class="project-inline-select__option-label">{{ getItemLabel(item) }}</span>
+            </ng-template>
+        </button>
+
+        <div *ngIf="!visibleItems.length"
+             class="project-inline-select__empty">
+            {{ emptyText }}
+        </div>
+    </div>
+</div>

@@ -1,0 +1,33 @@
+import { Component, OnInit } from '@angular/core';
+import { NzDrawerService } from 'ng-zorro-antd/drawer';
+import { SearchDrawerComponent } from '../../search/search-drawer/search-drawer.component';
+
+@Component({
+  selector: 'app-navbar-left',
+  templateUrl: './navbar-left.component.html',
+  styleUrls: ['./navbar-left.component.scss']
+})
+export class NavbarLeftComponent implements OnInit {
+  items: NavItem[];
+  constructor(private _drawerService: NzDrawerService) {}
+
+  ngOnInit(): void {
+    this.items = [new NavItem('search', 'Поиск задач', this.openSearchDrawler.bind(this))];
+  }
+
+  openSearchDrawler() {
+    this._drawerService.create({
+      nzContent: SearchDrawerComponent,
+      nzTitle: null,
+      nzPlacement: 'left',
+      nzClosable: false,
+      nzWidth: 500
+    });
+  }
+}
+
+class NavItem {
+  constructor(public icon: string, public tooltip: string, public handler: Handler) {}
+}
+
+type Handler = () => void;

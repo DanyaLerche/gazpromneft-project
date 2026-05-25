@@ -1,0 +1,264 @@
+<div class="settings-page">
+    <breadcrumbs [items]="breadcrumbs"></breadcrumbs>
+
+    <div class="settings-page__header">
+        <div>
+            <div class="settings-page__title">Настройки проекта</div>
+            <p class="settings-page__description">
+                Обновите параметры проекта и управляйте доступом участников к этому рабочему пространству.
+            </p>
+        </div>
+    </div>
+
+    <section class="settings-card">
+        <div class="settings-card__header">
+            <div>
+                <h2 class="settings-card__title">Общие настройки</h2>
+                <p class="settings-card__text">
+                    Эти поля сохраняются в проекте и видны всем пользователям с доступом.
+                </p>
+            </div>
+
+            <div class="settings-card__meta">
+                <span class="settings-card__meta-label">Ключ проекта</span>
+                <strong class="settings-card__meta-value">{{ project?.key || '...' }}</strong>
+            </div>
+        </div>
+
+        <div *ngIf="projectErrorMessage"
+             class="settings-alert settings-alert--error">
+            {{ projectErrorMessage }}
+        </div>
+
+        <form class="settings-form"
+              [formGroup]="projectForm"
+              (ngSubmit)="submitForm()">
+            <div class="form-group">
+                <label class="label">Название</label>
+                <input class="form-input"
+                       formControlName="name"
+                       placeholder="Название проекта"
+                       jAutofocus />
+            </div>
+
+            <div class="form-group">
+                <label class="label">Описание</label>
+                <textarea class="form-input settings-form__textarea"
+                          formControlName="description"
+                          placeholder="Опишите проект и его контекст">
+                </textarea>
+            </div>
+
+            <div class="settings-form__actions">
+                <app-button variant="primary"
+                            type="submit"
+                            [loading]="isSavingProject"
+                            [disabled]="projectForm.invalid || projectForm.pristine || isSavingProject">
+                    Сохранить изменения
+                </app-button>
+
+                <app-button variant="ghost"
+                            type="button"
+                            (click)="cancel()">
+                    Вернуться на доску
+                </app-button>
+            </div>
+        </form>
+    </section>
+
+    <section class="settings-card">
+        <div class="settings-card__header">
+            <div>
+                <h2 class="settings-card__title">Участники</h2>
+                <p class="settings-card__text">
+                    Ищите существующих пользователей, добавляйте их в проект, меняйте роли и отзывайте доступ.
+                </p>
+            </div>
+
+            <div class="settings-card__meta">
+                <span class="settings-card__meta-label">Прямые участники</span>
+                <strong class="settings-card__meta-value">{{ members.length }}</strong>
+            </div>
+        </div>
+
+        <div *ngIf="membersErrorMessage"
+             class="settings-alert settings-alert--error">
+            {{ membersErrorMessage }}
+        </div>
+
+        <div class="settings-members__search">
+            <div class="settings-members__search-header">
+                <div>
+                    <div class="settings-members__search-title">Добавить существующих пользователей</div>
+                    <p class="settings-members__search-text">
+                        Найдите активных пользователей платформы, которые еще не добавлены в этот проект.
+                    </p>
+                </div>
+
+                <span class="settings-members__search-status"
+                      *ngIf="isSearchingUsers">
+                    Поиск...
+                </span>
+            </div>
+
+            <j-input [control]="searchControl"
+                     icon="search"
+                     placeholder="Поиск по имени или email"
+                     [enableClearButton]="true">
+            </j-input>
+
+            <div class="settings-members__results"
+                 *ngIf="availableUsers.length; else availableUsersEmptyTmpl">
+                <div class="member-row member-row--candidate"
+                     *ngFor="let user of availableUsers; trackBy: trackByUserId">
+                    <div class="member-row__identity">
+                        <div class="member-row__avatar">
+                            <j-avatar *ngIf="user.avatarUrl"
+                                      [avatarUrl]="user.avatarUrl"
+                                      [size]="36">
+                            </j-avatar>
+                            <span *ngIf="!user.avatarUrl">
+                                {{ (user.name || user.email || '?').charAt(0).toUpperCase() }}
+                            </span>
+                        </div>
+
+                        <div class="member-row__copy">
+                            <div class="member-row__name">{{ user.name || 'Пользователь без имени' }}</div>
+                            <div class="member-row__email">{{ user.email }}</div>
+                        </div>
+                    </div>
+
+                    <div class="member-row__actions">
+                        <select class="form-input member-row__select"
+                                [ngModel]="getPendingRole(user.id)"
+                                [ngModelOptions]="{ standalone: true }"
+                                (ngModelChange)="setPendingRole(user.id, $event)">
+                            <option *ngFor="let role of projectRoles"
+                                    [ngValue]="role">
+                                {{ getProjectRoleLabel(role) }}
+                            </option>
+                        </select>
+
+                        <app-button variant="primary"
+                                    type="button"
+                                    [loading]="isMemberBusy(user.id)"
+                                    [disabled]="isMemberBusy(user.id)"
+                                    (click)="addUser(user)">
+                            Добавить
+                        </app-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-members__list">
+            <div class="settings-members__list-header">
+                <div class="settings-members__list-title">Текущие участники</div>
+                <div class="settings-members__list-note">
+                    Последнего прямого участника с ролью «Администратор проекта» нельзя удалить или понизить.
+                </div>
+            </div>
+
+            <div class="member-row"
+                 *ngFor="let user of members; trackBy: trackByUserId">
+                <div class="member-row__identity">
+                    <div class="member-row__avatar">
+                        <j-avatar *ngIf="user.avatarUrl"
+                                  [avatarUrl]="user.avatarUrl"
+                                  [size]="36">
+                        </j-avatar>
+                        <span *ngIf="!user.avatarUrl">
+                            {{ (user.name || user.email || '?').charAt(0).toUpperCase() }}
+                        </span>
+                    </div>
+
+                    <div class="member-row__copy">
+                        <div class="member-row__name">
+                            {{ user.name || 'Пользователь без имени' }}
+                            <span *ngIf="isCurrentUser(user)"
+                                  class="member-row__badge">
+                                Вы
+                            </span>
+                            <span *ngIf="isLastDirectAdmin(user)"
+                                  class="member-row__badge member-row__badge--warning">
+                                Последний прямой админ
+                            </span>
+                        </div>
+                        <div class="member-row__email">{{ user.email }}</div>
+                    </div>
+                </div>
+
+                <div class="member-row__actions">
+                    <label class="member-row__onboarding-toggle">
+                        <input type="checkbox"
+                               [checked]="isOnboardingAssignee(user.id)"
+                               [disabled]="isSavingOnboardingAssignees"
+                               (change)="toggleOnboardingAssignee(user, $event)" />
+                        <span>Onboarding</span>
+                    </label>
+
+                    <select class="form-input member-row__select"
+                            [ngModel]="user.projectRole"
+                            [ngModelOptions]="{ standalone: true }"
+                            [disabled]="isMemberBusy(user.id) || isLastDirectAdmin(user)"
+                            (ngModelChange)="changeMemberRole(user, $event)">
+                        <option *ngFor="let role of projectRoles"
+                                [ngValue]="role">
+                            {{ getProjectRoleLabel(role) }}
+                        </option>
+                    </select>
+
+                    <button class="member-row__remove"
+                            type="button"
+                            [disabled]="isMemberBusy(user.id) || isLastDirectAdmin(user)"
+                            (click)="removeUser(user)">
+                        {{ isMemberBusy(user.id) ? 'Выполняется...' : 'Удалить' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="settings-card settings-card--danger">
+        <div class="settings-card__header">
+            <div>
+                <h2 class="settings-card__title">Удаление проекта</h2>
+                <p class="settings-card__text">
+                    Проект можно удалить только если в нем нет задач. После удаления он исчезнет из списка проектов и связанных фильтров.
+                </p>
+            </div>
+        </div>
+
+        <div *ngIf="projectDeleteErrorMessage"
+             class="settings-alert settings-alert--error">
+            {{ projectDeleteErrorMessage }}
+        </div>
+
+        <div class="settings-danger-zone">
+            <div class="settings-danger-zone__copy">
+                <div class="settings-danger-zone__title">Безвозвратное действие</div>
+                <div class="settings-danger-zone__text">
+                    Перед удалением проверьте, что задачи проекта уже очищены или перенесены.
+                </div>
+            </div>
+
+            <button class="settings-danger-zone__button"
+                    type="button"
+                    [disabled]="isDeletingProject"
+                    (click)="deleteProject()">
+                {{ isDeletingProject ? 'Удаление...' : 'Удалить проект' }}
+            </button>
+        </div>
+    </section>
+</div>
+
+<ng-template #availableUsersEmptyTmpl>
+    <div class="settings-empty">
+        <span *ngIf="searchControl.value; else allUsersAddedTmpl">
+            По текущему запросу пользователи не найдены.
+        </span>
+        <ng-template #allUsersAddedTmpl>
+            Все доступные пользователи уже добавлены в этот проект.
+        </ng-template>
+    </div>
+</ng-template>
